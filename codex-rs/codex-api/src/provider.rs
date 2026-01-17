@@ -4,6 +4,7 @@ use codex_client::RetryOn;
 use codex_client::RetryPolicy;
 use http::Method;
 use http::header::HeaderMap;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -55,6 +56,8 @@ pub struct Provider {
     pub headers: HeaderMap,
     pub retry: RetryConfig,
     pub stream_idle_timeout: Duration,
+    pub chat_reasoning_field: String,
+    pub extra_body: Option<Value>,
 }
 
 impl Provider {

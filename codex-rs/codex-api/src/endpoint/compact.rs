@@ -136,6 +136,8 @@ mod tests {
                 retry_transport: true,
             },
             stream_idle_timeout: Duration::from_secs(1),
+            chat_reasoning_field: "reasoning".to_string(),
+            extra_body: None,
         }
     }
 

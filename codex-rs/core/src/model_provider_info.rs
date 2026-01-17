@@ -15,6 +15,7 @@ use http::header::HeaderValue;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::env::VarError;
 use std::time::Duration;
@@ -50,6 +51,23 @@ pub enum WireApi {
     /// Regular Chat Completions compatible with `/v1/chat/completions`.
     #[default]
     Chat,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ChatReasoningField {
+    #[default]
+    Reasoning,
+    ReasoningContent,
+}
+
+impl ChatReasoningField {
+    fn as_str(self) -> &'static str {
+        match self {
+            ChatReasoningField::Reasoning => "reasoning",
+            ChatReasoningField::ReasoningContent => "reasoning_content",
+        }
+    }
 }
 
 /// Serializable representation of a provider definition.
@@ -105,6 +123,14 @@ pub struct ModelProviderInfo {
     /// and API key (if needed) comes from the "env_key" environment variable.
     #[serde(default)]
     pub requires_openai_auth: bool,
+
+    /// Reasoning field to use in Chat Completions requests.
+    #[serde(default)]
+    pub chat_reasoning_field: ChatReasoningField,
+
+    /// Additional JSON fields merged into the request body.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra_body: Option<Value>,
 }
 
 impl ModelProviderInfo {
@@ -168,6 +194,8 @@ impl ModelProviderInfo {
             headers,
             retry,
             stream_idle_timeout: self.stream_idle_timeout(),
+            chat_reasoning_field: self.chat_reasoning_field.as_str().to_string(),
+            extra_body: self.extra_body.clone(),
         })
     }
 
@@ -254,6 +282,8 @@ impl ModelProviderInfo {
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: true,
+            chat_reasoning_field: ChatReasoningField::Reasoning,
+            extra_body: None,
         }
     }
 
@@ -332,6 +362,8 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         stream_max_retries: None,
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
+        chat_reasoning_field: ChatReasoningField::Reasoning,
+        extra_body: None,
     }
 }
 
@@ -360,6 +392,8 @@ base_url = "http://localhost:11434/v1"
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_reasoning_field: ChatReasoningField::Reasoning,
+            extra_body: None,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -390,6 +424,8 @@ query_params = { api-version = "2025-04-01-preview" }
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_reasoning_field: ChatReasoningField::Reasoning,
+            extra_body: None,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -423,6 +459,8 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_reasoning_field: ChatReasoningField::Reasoning,
+            extra_body: None,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -454,6 +492,8 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 stream_max_retries: None,
                 stream_idle_timeout_ms: None,
                 requires_openai_auth: false,
+                chat_reasoning_field: ChatReasoningField::Reasoning,
+                extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");
             assert!(
@@ -476,6 +516,8 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_reasoning_field: ChatReasoningField::Reasoning,
+            extra_body: None,
         };
         let named_api = named_provider.to_api_provider(None).expect("api provider");
         assert!(named_api.is_azure_responses_endpoint());
@@ -500,6 +542,8 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 stream_max_retries: None,
                 stream_idle_timeout_ms: None,
                 requires_openai_auth: false,
+                chat_reasoning_field: ChatReasoningField::Reasoning,
+                extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");
             assert!(

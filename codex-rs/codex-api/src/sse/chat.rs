@@ -9,6 +9,7 @@ use codex_protocol::models::ResponseItem;
 use eventsource_stream::Eventsource;
 use futures::Stream;
 use futures::StreamExt;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -158,7 +159,7 @@ pub async fn process_chat_sse<S>(
 
         for choice in choices {
             if let Some(delta) = choice.get("delta") {
-                if let Some(reasoning) = delta.get("reasoning") {
+                if let Some(reasoning) = reasoning_field(delta) {
                     if let Some(text) = reasoning.as_str() {
                         append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string())
                             .await;
@@ -245,7 +246,7 @@ pub async fn process_chat_sse<S>(
             }
 
             if let Some(message) = choice.get("message")
-                && let Some(reasoning) = message.get("reasoning")
+                && let Some(reasoning) = reasoning_field(message)
             {
                 if let Some(text) = reasoning.as_str() {
                     append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string()).await;
@@ -318,6 +319,12 @@ pub async fn process_chat_sse<S>(
             }
         }
     }
+}
+
+fn reasoning_field(value: &Value) -> Option<&Value> {
+    value
+        .get("reasoning_content")
+        .or_else(|| value.get("reasoning"))
 }
 
 async fn append_assistant_text(

@@ -3,6 +3,7 @@ use codex_core::AuthManager;
 use std::sync::Arc;
 use tracing_test::traced_test;
 
+use codex_core::ChatReasoningField;
 use codex_core::CodexAuth;
 use codex_core::ContentItem;
 use codex_core::ModelClient;
@@ -58,6 +59,8 @@ async fn run_stream_with_bytes(sse_body: &[u8]) -> Vec<ResponseEvent> {
         stream_max_retries: Some(0),
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
+        chat_reasoning_field: ChatReasoningField::Reasoning,
+        extra_body: None,
     };
 
     let codex_home = match TempDir::new() {
@@ -238,6 +241,43 @@ async fn streams_reasoning_from_string_delta() {
     match &events[5] {
         ResponseEvent::OutputItemDone(item) => assert_message(item, "ok"),
         other => panic!("expected terminal message, got {other:?}"),
+    }
+
+    assert_matches!(events[6], ResponseEvent::Completed { .. });
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn streams_reasoning_from_reasoning_content_delta() {
+    skip_if_no_network!();
+
+    let sse = concat!(
+        "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"think1\"}}]}\n\n",
+        "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n",
+        "data: {\"choices\":[{\"delta\":{} ,\"finish_reason\":\"stop\"}]}\n\n",
+    );
+
+    let events = run_stream(sse).await;
+    assert_eq!(events.len(), 7, "unexpected events: {events:?}");
+
+    match &events[0] {
+        ResponseEvent::OutputItemAdded(ResponseItem::Reasoning { .. }) => {}
+        other => panic!("expected initial reasoning item, got {other:?}"),
+    }
+
+    match &events[1] {
+        ResponseEvent::ReasoningContentDelta {
+            delta,
+            content_index,
+        } => {
+            assert_eq!(delta, "think1");
+            assert_eq!(content_index, &0);
+        }
+        other => panic!("expected reasoning delta, got {other:?}"),
+    }
+
+    match &events[5] {
+        ResponseEvent::OutputItemDone(item) => assert_reasoning(item, "think1"),
+        other => panic!("expected terminal reasoning, got {other:?}"),
     }
 
     assert_matches!(events[6], ResponseEvent::Completed { .. });

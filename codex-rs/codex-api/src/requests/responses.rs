@@ -6,6 +6,7 @@ use crate::provider::Provider;
 use crate::requests::headers::build_conversation_headers;
 use crate::requests::headers::insert_header;
 use crate::requests::headers::subagent_header;
+use crate::requests::merge_extra_body;
 use codex_protocol::models::ResponseItem;
 use codex_protocol::protocol::SessionSource;
 use http::HeaderMap;
@@ -145,6 +146,7 @@ impl<'a> ResponsesRequestBuilder<'a> {
         if store && provider.is_azure_responses_endpoint() {
             attach_item_ids(&mut body, input);
         }
+        merge_extra_body(&mut body, provider.extra_body.as_ref());
 
         let mut headers = self.headers;
         headers.extend(build_conversation_headers(self.conversation_id));
@@ -212,6 +214,8 @@ mod tests {
                 retry_transport: true,
             },
             stream_idle_timeout: Duration::from_secs(5),
+            chat_reasoning_field: "reasoning".to_string(),
+            extra_body: None,
         }
     }
 

@@ -43,6 +43,8 @@ fn provider(base_url: &str) -> Provider {
             retry_transport: true,
         },
         stream_idle_timeout: std::time::Duration::from_secs(1),
+        chat_reasoning_field: "reasoning".to_string(),
+        extra_body: None,
     }
 }
 

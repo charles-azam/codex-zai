@@ -3530,6 +3530,8 @@ model_verbosity = "high"
             stream_max_retries: Some(10),
             stream_idle_timeout_ms: Some(300_000),
             requires_openai_auth: false,
+            chat_reasoning_field: crate::ChatReasoningField::Reasoning,
+            extra_body: None,
         };
         let model_provider_map = {
             let mut model_provider_map = built_in_model_providers();

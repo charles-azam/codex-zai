@@ -22,6 +22,23 @@ Codex can run a notification hook when the agent finishes a turn. See the config
 
 The generated JSON Schema for `config.toml` lives at `codex-rs/core/config.schema.json`.
 
+## Model provider extras
+
+Some OpenAI-compatible providers require additional request fields or a different reasoning
+property name for Chat Completions. You can configure both per provider:
+
+```toml
+[model_providers.zai]
+name = "Z.ai"
+base_url = "https://api.z.ai/api/paas/v4"
+env_key = "ZAI_API_KEY"
+wire_api = "chat"
+chat_reasoning_field = "reasoning_content"
+extra_body = { thinking = { type = "enabled", clear_thinking = false } }
+```
+
+`extra_body` is merged into the request payload without overriding Codex fields.
+
 ## Notices
 
 Codex stores "do not show again" flags for some UI prompts under the `[notice]` table.

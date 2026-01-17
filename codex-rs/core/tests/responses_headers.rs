@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use codex_app_server_protocol::AuthMode;
 use codex_core::AuthManager;
+use codex_core::ChatReasoningField;
 use codex_core::CodexAuth;
 use codex_core::ContentItem;
 use codex_core::ModelClient;
@@ -56,6 +57,8 @@ async fn responses_stream_includes_subagent_header_on_review() {
         stream_max_retries: Some(0),
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
+        chat_reasoning_field: ChatReasoningField::Reasoning,
+        extra_body: None,
     };
 
     let codex_home = TempDir::new().expect("failed to create TempDir");
@@ -151,6 +154,8 @@ async fn responses_stream_includes_subagent_header_on_other() {
         stream_max_retries: Some(0),
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
+        chat_reasoning_field: ChatReasoningField::Reasoning,
+        extra_body: None,
     };
 
     let codex_home = TempDir::new().expect("failed to create TempDir");
@@ -302,6 +307,8 @@ async fn responses_respects_model_info_overrides_from_config() {
         stream_max_retries: Some(0),
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
+        chat_reasoning_field: ChatReasoningField::Reasoning,
+        extra_body: None,
     };
 
     let codex_home = TempDir::new().expect("failed to create TempDir");

@@ -3,6 +3,7 @@ use crate::provider::Provider;
 use crate::requests::headers::build_conversation_headers;
 use crate::requests::headers::insert_header;
 use crate::requests::headers::subagent_header;
+use crate::requests::merge_extra_body;
 use codex_protocol::models::ContentItem;
 use codex_protocol::models::FunctionCallOutputContentItem;
 use codex_protocol::models::ReasoningItemContent;
@@ -55,7 +56,8 @@ impl<'a> ChatRequestBuilder<'a> {
         self
     }
 
-    pub fn build(self, _provider: &Provider) -> Result<ChatRequest, ApiError> {
+    pub fn build(self, provider: &Provider) -> Result<ChatRequest, ApiError> {
+        let reasoning_field = provider.chat_reasoning_field.as_str();
         let mut messages = Vec::<Value>::new();
         messages.push(json!({"role": "system", "content": self.instructions}));
 
@@ -194,7 +196,7 @@ impl<'a> ChatRequestBuilder<'a> {
                         && let Some(reasoning) = reasoning_by_anchor_index.get(&idx)
                         && let Some(obj) = msg.as_object_mut()
                     {
-                        obj.insert("reasoning".to_string(), json!(reasoning));
+                        insert_reasoning(obj, reasoning_field, reasoning);
                     }
                     messages.push(msg);
                 }
@@ -213,7 +215,7 @@ impl<'a> ChatRequestBuilder<'a> {
                             "arguments": arguments,
                         }
                     });
-                    push_tool_call_message(&mut messages, tool_call, reasoning);
+                    push_tool_call_message(&mut messages, tool_call, reasoning, reasoning_field);
                 }
                 ResponseItem::LocalShellCall {
                     id,
@@ -228,7 +230,7 @@ impl<'a> ChatRequestBuilder<'a> {
                         "status": status,
                         "action": action,
                     });
-                    push_tool_call_message(&mut messages, tool_call, reasoning);
+                    push_tool_call_message(&mut messages, tool_call, reasoning, reasoning_field);
                 }
                 ResponseItem::FunctionCallOutput { call_id, output } => {
                     let content_value = if let Some(items) = &output.content_items {
@@ -270,7 +272,7 @@ impl<'a> ChatRequestBuilder<'a> {
                         }
                     });
                     let reasoning = reasoning_by_anchor_index.get(&idx).map(String::as_str);
-                    push_tool_call_message(&mut messages, tool_call, reasoning);
+                    push_tool_call_message(&mut messages, tool_call, reasoning, reasoning_field);
                 }
                 ResponseItem::CustomToolCallOutput { call_id, output } => {
                     messages.push(json!({
@@ -291,12 +293,13 @@ impl<'a> ChatRequestBuilder<'a> {
             }
         }
 
-        let payload = json!({
+        let mut payload = json!({
             "model": self.model,
             "messages": messages,
             "stream": true,
             "tools": self.tools,
         });
+        merge_extra_body(&mut payload, provider.extra_body.as_ref());
 
         let mut headers = build_conversation_headers(self.conversation_id);
         if let Some(subagent) = subagent_header(&self.session_source) {
@@ -310,7 +313,23 @@ impl<'a> ChatRequestBuilder<'a> {
     }
 }
 
-fn push_tool_call_message(messages: &mut Vec<Value>, tool_call: Value, reasoning: Option<&str>) {
+fn insert_reasoning(
+    obj: &mut serde_json::Map<String, Value>,
+    reasoning_field: &str,
+    reasoning: &str,
+) {
+    obj.insert(
+        reasoning_field.to_string(),
+        Value::String(reasoning.to_string()),
+    );
+}
+
+fn push_tool_call_message(
+    messages: &mut Vec<Value>,
+    tool_call: Value,
+    reasoning: Option<&str>,
+    reasoning_field: &str,
+) {
     // Chat Completions requires that tool calls are grouped into a single assistant message
     // (with `tool_calls: [...]`) followed by tool role responses.
     if let Some(Value::Object(obj)) = messages.last_mut()
@@ -320,14 +339,14 @@ fn push_tool_call_message(messages: &mut Vec<Value>, tool_call: Value, reasoning
     {
         tool_calls.push(tool_call);
         if let Some(reasoning) = reasoning {
-            if let Some(Value::String(existing)) = obj.get_mut("reasoning") {
+            if let Some(Value::String(existing)) = obj.get_mut(reasoning_field) {
                 if !existing.is_empty() {
                     existing.push('\n');
                 }
                 existing.push_str(reasoning);
             } else {
                 obj.insert(
-                    "reasoning".to_string(),
+                    reasoning_field.to_string(),
                     Value::String(reasoning.to_string()),
                 );
             }
@@ -343,7 +362,7 @@ fn push_tool_call_message(messages: &mut Vec<Value>, tool_call: Value, reasoning
     if let Some(reasoning) = reasoning
         && let Some(obj) = msg.as_object_mut()
     {
-        obj.insert("reasoning".to_string(), json!(reasoning));
+        obj.insert(reasoning_field.to_string(), json!(reasoning));
     }
     messages.push(msg);
 }
@@ -354,13 +373,14 @@ mod tests {
     use crate::provider::RetryConfig;
     use crate::provider::WireApi;
     use codex_protocol::models::FunctionCallOutputPayload;
+    use codex_protocol::models::ReasoningItemContent;
     use codex_protocol::protocol::SessionSource;
     use codex_protocol::protocol::SubAgentSource;
     use http::HeaderValue;
     use pretty_assertions::assert_eq;
     use std::time::Duration;
 
-    fn provider() -> Provider {
+    fn provider_with_reasoning_field(reasoning_field: &str) -> Provider {
         Provider {
             name: "openai".to_string(),
             base_url: "https://api.openai.com/v1".to_string(),
@@ -375,7 +395,13 @@ mod tests {
                 retry_transport: true,
             },
             stream_idle_timeout: Duration::from_secs(1),
+            chat_reasoning_field: reasoning_field.to_string(),
+            extra_body: None,
         }
+    }
+
+    fn provider() -> Provider {
+        provider_with_reasoning_field("reasoning")
     }
 
     #[test]
@@ -486,5 +512,56 @@ mod tests {
         assert_eq!(messages[4]["tool_call_id"], "call-b");
         assert_eq!(messages[5]["role"], "tool");
         assert_eq!(messages[5]["tool_call_id"], "call-c");
+    }
+
+    #[test]
+    fn attaches_reasoning_using_provider_field() {
+        let prompt_input = vec![
+            ResponseItem::Message {
+                id: None,
+                role: "user".to_string(),
+                content: vec![ContentItem::InputText {
+                    text: "hi".to_string(),
+                }],
+            },
+            ResponseItem::Reasoning {
+                id: String::new(),
+                summary: Vec::new(),
+                content: Some(vec![ReasoningItemContent::ReasoningText {
+                    text: "thinking".to_string(),
+                }]),
+                encrypted_content: None,
+            },
+            ResponseItem::FunctionCall {
+                id: None,
+                name: "do_a".to_string(),
+                arguments: "{}".to_string(),
+                call_id: "call-a".to_string(),
+            },
+        ];
+
+        let req = ChatRequestBuilder::new("gpt-test", "inst", &prompt_input, &[])
+            .build(&provider_with_reasoning_field("reasoning_content"))
+            .expect("request");
+
+        let messages = req
+            .body
+            .get("messages")
+            .and_then(|v| v.as_array())
+            .expect("messages array");
+
+        assert_eq!(
+            messages[2],
+            json!({
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [{
+                    "id": "call-a",
+                    "type": "function",
+                    "function": { "name": "do_a", "arguments": "{}" }
+                }],
+                "reasoning_content": "thinking"
+            })
+        );
     }
 }
