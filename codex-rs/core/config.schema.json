@@ -518,6 +518,13 @@
         }
       ]
     },
+    "ChatDeveloperRole": {
+      "type": "string",
+      "enum": [
+        "developer",
+        "system"
+      ]
+    },
     "ChatReasoningField": {
       "type": "string",
       "enum": [
@@ -753,6 +760,15 @@
         "base_url": {
           "description": "Base URL for the provider's OpenAI-compatible API.",
           "type": "string"
+        },
+        "chat_developer_role": {
+          "description": "Role name to use for developer instructions in Chat Completions.",
+          "default": "developer",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ChatDeveloperRole"
+            }
+          ]
         },
         "chat_reasoning_field": {
           "description": "Reasoning field to use in Chat Completions requests.",

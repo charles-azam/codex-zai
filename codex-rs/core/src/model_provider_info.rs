@@ -21,6 +21,7 @@ use std::env::VarError;
 use std::time::Duration;
 
 use crate::error::EnvVarError;
+use serde_json::json;
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS: u64 = 300_000;
 const DEFAULT_STREAM_MAX_RETRIES: u64 = 5;
 const DEFAULT_REQUEST_MAX_RETRIES: u64 = 4;
@@ -30,7 +31,7 @@ const MAX_STREAM_MAX_RETRIES: u64 = 100;
 const MAX_REQUEST_MAX_RETRIES: u64 = 100;
 pub const CHAT_WIRE_API_DEPRECATION_SUMMARY: &str = r#"Support for the "chat" wire API is deprecated and will soon be removed. Update your model provider definition in config.toml to use wire_api = "responses"."#;
 
-const OPENAI_PROVIDER_NAME: &str = "OpenAI";
+const OPENAI_PROVIDER_NAME: &str = "Z.ai";
 
 /// Wire protocol that the provider speaks. Most third-party services only
 /// implement the classic OpenAI Chat Completions JSON schema, whereas OpenAI
@@ -66,6 +67,23 @@ impl ChatReasoningField {
         match self {
             ChatReasoningField::Reasoning => "reasoning",
             ChatReasoningField::ReasoningContent => "reasoning_content",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum ChatDeveloperRole {
+    #[default]
+    Developer,
+    System,
+}
+
+impl ChatDeveloperRole {
+    fn as_str(self) -> &'static str {
+        match self {
+            ChatDeveloperRole::Developer => "developer",
+            ChatDeveloperRole::System => "system",
         }
     }
 }
@@ -127,6 +145,10 @@ pub struct ModelProviderInfo {
     /// Reasoning field to use in Chat Completions requests.
     #[serde(default)]
     pub chat_reasoning_field: ChatReasoningField,
+
+    /// Role name to use for developer instructions in Chat Completions.
+    #[serde(default)]
+    pub chat_developer_role: ChatDeveloperRole,
 
     /// Additional JSON fields merged into the request body.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -195,6 +217,7 @@ impl ModelProviderInfo {
             retry,
             stream_idle_timeout: self.stream_idle_timeout(),
             chat_reasoning_field: self.chat_reasoning_field.as_str().to_string(),
+            chat_developer_role: self.chat_developer_role.as_str().to_string(),
             extra_body: self.extra_body.clone(),
         })
     }
@@ -248,42 +271,27 @@ impl ModelProviderInfo {
     pub fn create_openai_provider() -> ModelProviderInfo {
         ModelProviderInfo {
             name: OPENAI_PROVIDER_NAME.into(),
-            // Allow users to override the default OpenAI endpoint by
-            // exporting `OPENAI_BASE_URL`. This is useful when pointing
-            // Codex at a proxy, mock server, or Azure-style deployment
-            // without requiring a full TOML override for the built-in
-            // OpenAI provider.
-            base_url: std::env::var("OPENAI_BASE_URL")
-                .ok()
-                .filter(|v| !v.trim().is_empty()),
-            env_key: None,
-            env_key_instructions: None,
+            base_url: Some("https://api.z.ai/api/paas/v4".to_string()),
+            env_key: Some("ZAI_API_KEY".to_string()),
+            env_key_instructions: Some("Set ZAI_API_KEY to your Z.ai API key.".to_string()),
             experimental_bearer_token: None,
-            wire_api: WireApi::Responses,
+            wire_api: WireApi::Chat,
             query_params: None,
-            http_headers: Some(
-                [("version".to_string(), env!("CARGO_PKG_VERSION").to_string())]
-                    .into_iter()
-                    .collect(),
-            ),
-            env_http_headers: Some(
-                [
-                    (
-                        "OpenAI-Organization".to_string(),
-                        "OPENAI_ORGANIZATION".to_string(),
-                    ),
-                    ("OpenAI-Project".to_string(), "OPENAI_PROJECT".to_string()),
-                ]
-                .into_iter()
-                .collect(),
-            ),
+            http_headers: None,
+            env_http_headers: None,
             // Use global defaults for retry/timeout unless overridden in config.toml.
             request_max_retries: None,
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
-            requires_openai_auth: true,
-            chat_reasoning_field: ChatReasoningField::Reasoning,
-            extra_body: None,
+            requires_openai_auth: false,
+            chat_reasoning_field: ChatReasoningField::ReasoningContent,
+            chat_developer_role: ChatDeveloperRole::System,
+            extra_body: Some(json!({
+                "thinking": {
+                    "type": "enabled",
+                    "clear_thinking": false
+                }
+            })),
         }
     }
 
@@ -363,6 +371,7 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     }
 }
@@ -393,6 +402,7 @@ base_url = "http://localhost:11434/v1"
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
+            chat_developer_role: ChatDeveloperRole::Developer,
             extra_body: None,
         };
 
@@ -425,6 +435,7 @@ query_params = { api-version = "2025-04-01-preview" }
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
+            chat_developer_role: ChatDeveloperRole::Developer,
             extra_body: None,
         };
 
@@ -460,6 +471,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
+            chat_developer_role: ChatDeveloperRole::Developer,
             extra_body: None,
         };
 
@@ -493,6 +505,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 stream_idle_timeout_ms: None,
                 requires_openai_auth: false,
                 chat_reasoning_field: ChatReasoningField::Reasoning,
+                chat_developer_role: ChatDeveloperRole::Developer,
                 extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");
@@ -517,6 +530,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
+            chat_developer_role: ChatDeveloperRole::Developer,
             extra_body: None,
         };
         let named_api = named_provider.to_api_provider(None).expect("api provider");
@@ -543,6 +557,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 stream_idle_timeout_ms: None,
                 requires_openai_auth: false,
                 chat_reasoning_field: ChatReasoningField::Reasoning,
+                chat_developer_role: ChatDeveloperRole::Developer,
                 extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");

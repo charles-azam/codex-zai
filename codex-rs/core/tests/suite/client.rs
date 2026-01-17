@@ -1,4 +1,5 @@
 use codex_core::AuthManager;
+use codex_core::ChatDeveloperRole;
 use codex_core::ChatReasoningField;
 use codex_core::CodexAuth;
 use codex_core::ContentItem;
@@ -1221,6 +1222,7 @@ async fn azure_responses_request_includes_store_and_reasoning_ids() {
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     };
 
@@ -1745,6 +1747,7 @@ async fn azure_overrides_assign_properties_used_for_responses_url() {
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     };
 
@@ -1831,6 +1834,7 @@ async fn env_var_overrides_loaded_auth() {
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     };
 

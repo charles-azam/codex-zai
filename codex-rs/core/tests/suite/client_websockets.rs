@@ -1,5 +1,6 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 use codex_core::AuthManager;
+use codex_core::ChatDeveloperRole;
 use codex_core::ChatReasoningField;
 use codex_core::CodexAuth;
 use codex_core::ContentItem;
@@ -160,6 +161,7 @@ fn websocket_provider(server: &WebSocketTestServer) -> ModelProviderInfo {
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     }
 }

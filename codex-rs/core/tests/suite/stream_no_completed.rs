@@ -1,6 +1,7 @@
 //! Verifies that the agent retries when the SSE stream terminates before
 //! delivering a `response.completed` event.
 
+use codex_core::ChatDeveloperRole;
 use codex_core::ChatReasoningField;
 use codex_core::ModelProviderInfo;
 use codex_core::WireApi;
@@ -83,6 +84,7 @@ async fn retries_on_early_close() {
         stream_idle_timeout_ms: Some(2000),
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     };
 

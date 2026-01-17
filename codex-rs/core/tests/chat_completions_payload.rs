@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use codex_app_server_protocol::AuthMode;
+use codex_core::ChatDeveloperRole;
 use codex_core::ChatReasoningField;
 use codex_core::ContentItem;
 use codex_core::LocalShellAction;
@@ -61,6 +62,7 @@ async fn run_request(input: Vec<ResponseItem>) -> Value {
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     };
 

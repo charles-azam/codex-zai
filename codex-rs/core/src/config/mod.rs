@@ -3531,6 +3531,7 @@ model_verbosity = "high"
             stream_idle_timeout_ms: Some(300_000),
             requires_openai_auth: false,
             chat_reasoning_field: crate::ChatReasoningField::Reasoning,
+            chat_developer_role: crate::ChatDeveloperRole::Developer,
             extra_body: None,
         };
         let model_provider_map = {

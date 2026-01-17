@@ -3,6 +3,7 @@ use codex_core::AuthManager;
 use std::sync::Arc;
 use tracing_test::traced_test;
 
+use codex_core::ChatDeveloperRole;
 use codex_core::ChatReasoningField;
 use codex_core::CodexAuth;
 use codex_core::ContentItem;
@@ -60,6 +61,7 @@ async fn run_stream_with_bytes(sse_body: &[u8]) -> Vec<ResponseEvent> {
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     };
 

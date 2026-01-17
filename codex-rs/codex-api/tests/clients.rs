@@ -135,6 +135,7 @@ fn provider(name: &str, wire: WireApi) -> Provider {
         },
         stream_idle_timeout: Duration::from_millis(10),
         chat_reasoning_field: "reasoning".to_string(),
+        chat_developer_role: "developer".to_string(),
         extra_body: None,
     }
 }

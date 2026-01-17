@@ -34,10 +34,12 @@ base_url = "https://api.z.ai/api/paas/v4"
 env_key = "ZAI_API_KEY"
 wire_api = "chat"
 chat_reasoning_field = "reasoning_content"
+chat_developer_role = "system"
 extra_body = { thinking = { type = "enabled", clear_thinking = false } }
 ```
 
 `extra_body` is merged into the request payload without overriding Codex fields.
+`chat_developer_role` remaps the `developer` role to a supported chat role.
 
 ## Notices
 

@@ -57,6 +57,7 @@ pub struct Provider {
     pub retry: RetryConfig,
     pub stream_idle_timeout: Duration,
     pub chat_reasoning_field: String,
+    pub chat_developer_role: String,
     pub extra_body: Option<Value>,
 }
 

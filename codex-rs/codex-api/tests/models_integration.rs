@@ -44,6 +44,7 @@ fn provider(base_url: &str) -> Provider {
         },
         stream_idle_timeout: std::time::Duration::from_secs(1),
         chat_reasoning_field: "reasoning".to_string(),
+        chat_developer_role: "developer".to_string(),
         extra_body: None,
     }
 }

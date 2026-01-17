@@ -191,7 +191,12 @@ impl<'a> ChatRequestBuilder<'a> {
                         json!(text)
                     };
 
-                    let mut msg = json!({"role": role, "content": content_value});
+                    let mapped_role = if role == "developer" {
+                        provider.chat_developer_role.as_str()
+                    } else {
+                        role.as_str()
+                    };
+                    let mut msg = json!({"role": mapped_role, "content": content_value});
                     if role == "assistant"
                         && let Some(reasoning) = reasoning_by_anchor_index.get(&idx)
                         && let Some(obj) = msg.as_object_mut()
@@ -396,6 +401,7 @@ mod tests {
             },
             stream_idle_timeout: Duration::from_secs(1),
             chat_reasoning_field: reasoning_field.to_string(),
+            chat_developer_role: "developer".to_string(),
             extra_body: None,
         }
     }
@@ -427,6 +433,41 @@ mod tests {
             req.headers.get("x-openai-subagent"),
             Some(&HeaderValue::from_static("review"))
         );
+    }
+
+    #[test]
+    fn maps_developer_role_to_provider_setting() {
+        let prompt_input = vec![ResponseItem::Message {
+            id: None,
+            role: "developer".to_string(),
+            content: vec![ContentItem::InputText {
+                text: "be careful".to_string(),
+            }],
+        }];
+        let provider = Provider {
+            name: "openai".to_string(),
+            base_url: "https://api.openai.com/v1".to_string(),
+            query_params: None,
+            wire: WireApi::Chat,
+            headers: HeaderMap::new(),
+            retry: RetryConfig {
+                max_attempts: 1,
+                base_delay: Duration::from_millis(10),
+                retry_429: false,
+                retry_5xx: true,
+                retry_transport: true,
+            },
+            stream_idle_timeout: Duration::from_secs(1),
+            chat_reasoning_field: "reasoning".to_string(),
+            chat_developer_role: "system".to_string(),
+            extra_body: None,
+        };
+
+        let req = ChatRequestBuilder::new("gpt-test", "inst", &prompt_input, &[])
+            .build(&provider)
+            .expect("request");
+        let messages = req.body["messages"].as_array().expect("messages array");
+        assert_eq!(messages[1]["role"], "system");
     }
 
     #[test]

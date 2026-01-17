@@ -1,3 +1,4 @@
+use codex_core::ChatDeveloperRole;
 use codex_core::ChatReasoningField;
 use codex_core::ModelProviderInfo;
 use codex_core::WireApi;
@@ -75,6 +76,7 @@ async fn continue_after_stream_error() {
         stream_idle_timeout_ms: Some(2_000),
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
+        chat_developer_role: ChatDeveloperRole::Developer,
         extra_body: None,
     };
 
