@@ -38,6 +38,7 @@ codex-tui = { workspace = true }
 codex-tui2 = { workspace = true }
 codex-utils-absolute-path = { workspace = true }
 libc = { workspace = true }
+openssl = { workspace = true }
 owo-colors = { workspace = true }
 regex-lite = { workspace = true }
 serde_json = { workspace = true }
