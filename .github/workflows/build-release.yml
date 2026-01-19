@@ -60,7 +60,9 @@ jobs:
       - name: Rename Binary
         working-directory: codex-rs/target/${{ matrix.target }}/release
         run: |
-          mv codex codex${{ matrix.suffix }}
+          if [ "codex" != "codex${{ matrix.suffix }}" ]; then
+            mv codex codex${{ matrix.suffix }}
+          fi
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
