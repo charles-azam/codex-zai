@@ -75,6 +75,10 @@ pub struct Cli {
     #[arg(long = "output-schema", value_name = "FILE")]
     pub output_schema: Option<PathBuf>,
 
+    /// Disable ZAI thinking capabilities.
+    #[arg(long = "no-thinking", default_value_t = false)]
+    pub no_thinking: bool,
+
     #[clap(skip)]
     pub config_overrides: CliConfigOverrides,
 

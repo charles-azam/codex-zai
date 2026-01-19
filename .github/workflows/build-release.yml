@@ -1,0 +1,75 @@
+name: Build and Release Codex ZAI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            use_cross: false
+            suffix: ""
+          - target: aarch64-unknown-linux-gnu
+            use_cross: true
+            suffix: "-arm64"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # === x86_64 (Native) Setup ===
+      - name: Install Host Dependencies (x86_64)
+        if: matrix.use_cross == false
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config libxcb-shape0-dev libxcb-xfixes0-dev
+
+      # === ARM64 (Cross) Setup ===
+      - name: Install Cross
+        if: matrix.use_cross == true
+        run: |
+          # Install cross using cargo (it pulls a pre-built binary for the host usually, or compiles it)
+          cargo install cross --git https://github.com/cross-rs/cross
+
+      # === Build ===
+      - name: Build
+        working-directory: codex-rs
+        run: |
+          if [ "${{ matrix.use_cross }}" == "true" ]; then
+            echo "Building with Cross for ${{ matrix.target }}..."
+            cross build --release -p codex-cli --target ${{ matrix.target }}
+          else
+            echo "Building with Cargo for ${{ matrix.target }}..."
+            cargo build --release -p codex-cli --target ${{ matrix.target }}
+          fi
+
+      # === Rename & Package ===
+      - name: Rename Binary
+        working-directory: codex-rs/target/${{ matrix.target }}/release
+        run: |
+          if [ "codex-zai" != "codex-zai${{ matrix.suffix }}" ]; then
+            mv codex-zai codex-zai${{ matrix.suffix }}
+          fi
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: codex-rs/target/${{ matrix.target }}/release/codex-zai${{ matrix.suffix }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

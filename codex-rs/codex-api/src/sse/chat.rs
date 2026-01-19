@@ -171,6 +171,13 @@ pub async fn process_chat_sse<S>(
                     }
                 }
 
+                if let Some(reasoning_content) = delta.get("reasoning_content") {
+                    if let Some(text) = reasoning_content.as_str() {
+                        append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string())
+                            .await;
+                    }
+                }
+
                 if let Some(content) = delta.get("content") {
                     if content.is_array() {
                         for item in content.as_array().unwrap_or(&vec![]) {

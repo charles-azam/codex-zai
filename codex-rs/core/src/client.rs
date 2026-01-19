@@ -499,7 +499,10 @@ impl ModelClientSession {
 
         let auth_manager = self.state.auth_manager.clone();
         let instructions = prompt.base_instructions.text.clone();
-        let tools_json = create_tools_json_for_chat_completions_api(&prompt.tools)?;
+        let tools_json = create_tools_json_for_chat_completions_api(
+            &prompt.tools,
+            self.state.provider.is_zai(),
+        )?;
         let api_prompt = build_api_prompt(prompt, instructions, tools_json);
         let conversation_id = self.state.conversation_id.to_string();
         let session_source = self.state.session_source.clone();
@@ -512,10 +515,27 @@ impl ModelClientSession {
                 Some(manager) => manager.auth().await,
                 None => None,
             };
-            let api_provider = self
+            let mut api_provider = self
                 .state
                 .provider
                 .to_api_provider(auth.as_ref().map(CodexAuth::internal_auth_mode))?;
+
+            if let Some(thinking_enabled) = self.state.config.thinking {
+                if api_provider.is_zai() {
+                    if let Some(thinking) = &mut api_provider.thinking {
+                        thinking.r#type = if thinking_enabled {
+                            codex_api::provider::ZaiThinkingType::Enabled
+                        } else {
+                            codex_api::provider::ZaiThinkingType::Disabled
+                        };
+                    } else if thinking_enabled {
+                        api_provider.thinking = Some(codex_api::provider::ZaiThinkingConfig {
+                            r#type: codex_api::provider::ZaiThinkingType::Enabled,
+                            clear_thinking: false,
+                        });
+                    }
+                }
+            }
             let api_auth = auth_provider_from_auth(auth.clone(), &self.state.provider)?;
             let transport = ReqwestTransport::new(build_reqwest_client());
             let (request_telemetry, sse_telemetry) = self.build_streaming_telemetry();

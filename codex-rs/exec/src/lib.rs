@@ -111,6 +111,7 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
         sandbox_mode: sandbox_mode_cli_arg,
         prompt,
         output_schema: output_schema_path,
+        no_thinking,
         config_overrides,
     } = cli;
 
@@ -258,6 +259,7 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
         tools_web_search_request: None,
         ephemeral: None,
         additional_writable_roots: add_dir,
+        thinking: no_thinking.then_some(false),
     };
 
     let config = ConfigBuilder::default()
@@ -270,6 +272,12 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
 
     if let Err(err) = enforce_login_restrictions(&config) {
         eprintln!("{err}");
+        std::process::exit(1);
+    }
+
+    if config.model_provider.is_zai() && std::env::var("ZAI_API_KEY").is_err() {
+        eprintln!("Error: ZAI_API_KEY environment variable is not set.");
+        eprintln!("Please set it using: export ZAI_API_KEY=...");
         std::process::exit(1);
     }
 

@@ -1,59 +1,152 @@
-<p align="center"><code>npm i -g @openai/codex</code><br />or <code>brew install --cask codex</code></p>
-<p align="center"><strong>Codex CLI</strong> is a coding agent from OpenAI that runs locally on your computer.
-<p align="center">
-  <img src="https://github.com/openai/codex/blob/main/.github/codex-cli-splash.png" alt="Codex CLI splash" width="80%" />
-</p>
-</br>
-If you want Codex in your code editor (VS Code, Cursor, Windsurf), <a href="https://developers.openai.com/codex/ide">install in your IDE.</a>
-</br>If you are looking for the <em>cloud-based agent</em> from OpenAI, <strong>Codex Web</strong>, go to <a href="https://chatgpt.com/codex">chatgpt.com/codex</a>.</p>
+# Codex ZAI Fork (Benchmark Edition)
+
+This is a specialized fork of OpenAI Codex, adapted to benchmark **ZAI's GLM-4.7** model on complex agentic tasks.
+
+**Objective:** To evaluate the performance of GLM-4.7's "Preserved Thinking" and agentic capabilities within a production-grade coding agent scaffolding. This fork enables direct comparison between raw model outputs and agentic workflows using the same underlying model.
+
+## Key modifications
+
+This fork modifies the core Codex engine to support ZAI specific features:
+
+1.  **Native ZAI Provider:** Implemented a built-in `zai` provider pointing to `https://api.z.ai/api/coding/paas/v4`.
+2.  **Preserved Thinking:** Integrated ZAI's `reasoning_content` field. The agent now captures and displays the model's hidden reasoning process.
+3.  **Thinking Toggle:** Added a `--no-thinking` flag to disable reasoning for control group benchmarks.
+4.  **Web Search Integration:** Connected ZAI's native "in-chat" web search capabilities via the `--search` flag.
+5.  **Environment Isolation:** All configuration and session history is stored in `~/.codex-zai` instead of `~/.codex` to prevent conflicts with your existing Codex installation.
+6.  **Default Model:** Automatically defaults to `glm-4.7` and the ZAI provider.
+7.  **Renamed Binary:** The tool is now called `codex-zai` to avoid confusion.
 
 ---
 
-## Quickstart
+## 🚀 Quick Install (Binaries)
 
-### Installing and running Codex CLI
+**Do not build from source unless you have to.** We provide pre-compiled binaries for Linux (x86_64 and ARM64).
 
-Install globally with your preferred package manager:
-
-```shell
-# Install using npm
-npm install -g @openai/codex
+### 0. One-line install
+```bash
+curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh
 ```
 
-```shell
-# Install using Homebrew
-brew install --cask codex
+If you want a different install dir:
+```bash
+INSTALL_DIR="$HOME/.local/bin" sh -c 'curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh'
+```
+The script installs to `~` by default and adds it to your shell rc.
+
+### 0.1. Quick start
+```bash
+# Reload your shell config (or open a new terminal)
+source ~/.zshrc 2>/dev/null || source ~/.bashrc
+
+# Set your API key
+export ZAI_API_KEY="your_api_key_here"
+
+# Verify
+codex-zai --version
 ```
 
-Then simply run `codex` to get started.
+### 0.2. Dockerfile snippet
+```dockerfile
+RUN curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh
+ENV PATH="$HOME:$PATH"
+```
 
-<details>
-<summary>You can also go to the <a href="https://github.com/openai/codex/releases/latest">latest GitHub Release</a> and download the appropriate binary for your platform.</summary>
+### 1. Download
+Go to the **[Releases Page](../../releases/latest)** or use the command line:
 
-Each GitHub Release contains many executables, but in practice, you likely want one of these:
+**For Standard Linux (x86_64):**
+```bash
+wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai
+chmod +x codex-zai
+```
 
-- macOS
-  - Apple Silicon/arm64: `codex-aarch64-apple-darwin.tar.gz`
-  - x86_64 (older Mac hardware): `codex-x86_64-apple-darwin.tar.gz`
-- Linux
-  - x86_64: `codex-x86_64-unknown-linux-musl.tar.gz`
-  - arm64: `codex-aarch64-unknown-linux-musl.tar.gz`
+**For ARM Linux (ARM64 / Graviton / Apple Silicon Docker):**
+```bash
+wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai-arm64
+chmod +x codex-zai
+```
 
-Each archive contains a single entry with the platform baked into the name (e.g., `codex-x86_64-unknown-linux-musl`), so you likely want to rename it to `codex` after extracting it.
+### 2. Move to Path
+```bash
+sudo mv codex-zai /usr/local/bin/
+```
 
-</details>
+### 3. Set API Key
+```bash
+export ZAI_API_KEY="your_api_key_here"
+```
 
-### Using Codex with your ChatGPT plan
+---
 
-Run `codex` and select **Sign in with ChatGPT**. We recommend signing into your ChatGPT account to use Codex as part of your Plus, Pro, Team, Edu, or Enterprise plan. [Learn more about what's included in your ChatGPT plan](https://help.openai.com/en/articles/11369540-codex-in-chatgpt).
+## 🤖 Running the Benchmark
 
-You can also use Codex with an API key, but this requires [additional setup](https://developers.openai.com/codex/auth#sign-in-with-an-api-key).
+### 1. Standard Benchmark (Thinking Enabled)
+Uses GLM-4.7 with Preserved Thinking enabled. This is the primary test case for agentic reasoning.
 
-## Docs
+```bash
+codex-zai
+```
 
-- [**Codex Documentation**](https://developers.openai.com/codex)
-- [**Contributing**](./docs/contributing.md)
-- [**Installing & building**](./docs/install.md)
-- [**Open source fund**](./docs/open-source-fund.md)
+### 2. Control Group (Thinking Disabled)
+Forces the model to skip the reasoning phase and answer immediately.
 
-This repository is licensed under the [Apache-2.0 License](LICENSE).
+```bash
+codex-zai --no-thinking
+```
+
+### 3. Web Search Capability
+Enables ZAI's native web search tool. The model can browse the web to answer questions.
+
+```bash
+# With Thinking + Web Search
+codex-zai --search
+
+# Without Thinking + Web Search
+codex-zai --no-thinking --search
+```
+
+### 4. Headless Execution (for Scripts/Pipelines)
+Use the `exec` mode to run without the UI.
+
+```bash
+# Example: Pipe a prompt into the agent
+echo "Calculate the 10th Fibonacci number" | codex-zai exec --full-auto
+```
+
+---
+
+## 📦 Deployment for Pipelines (CI/CD)
+
+Use this snippet in your Dockerfile or CI script to automatically detect the architecture and install the correct binary.
+
+```bash
+# Auto-detect architecture (x86_64 or arm64)
+ARCH=$(uname -m)
+BASE_URL="https://github.com/charles-azam/codex-zai/releases/latest/download"
+
+if [ "$ARCH" = "aarch64" ]; then
+  echo "Downloading ARM64 binary..."
+  wget -O codex-zai "$BASE_URL/codex-zai-arm64"
+else
+  echo "Downloading x86_64 binary..."
+  wget -O codex-zai "$BASE_URL/codex-zai"
+fi
+
+chmod +x codex-zai
+mv codex-zai /usr/local/bin/
+
+# Verify installation
+codex-zai --version
+```
+
+---
+
+## Building from Source (Optional)
+
+If you are developing features, you can build manually using Rust.
+
+```bash
+cd codex-rs
+cargo build --release -p codex-cli
+./target/release/codex-zai --version
+```

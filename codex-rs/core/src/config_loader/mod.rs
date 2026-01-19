@@ -697,7 +697,7 @@ async fn load_project_layers(
 
     let mut layers = Vec::new();
     for dir in dirs {
-        let dot_codex = dir.join(".codex");
+        let dot_codex = dir.join(".codex-zai");
         if !tokio::fs::metadata(&dot_codex)
             .await
             .map(|meta| meta.is_dir())

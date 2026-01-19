@@ -458,6 +458,14 @@
           "description": "Whether this provider supports the Responses API WebSocket transport.",
           "type": "boolean"
         },
+        "thinking": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ZaiThinkingConfig"
+            }
+          ],
+          "description": "Optional ZAI-specific thinking configuration."
+        },
         "wire_api": {
           "allOf": [
             {
@@ -1104,6 +1112,28 @@
           "type": "string"
         }
       ]
+    },
+    "ZaiThinkingConfig": {
+      "properties": {
+        "clear_thinking": {
+          "type": "boolean"
+        },
+        "type": {
+          "$ref": "#/definitions/ZaiThinkingType"
+        }
+      },
+      "required": [
+        "clear_thinking",
+        "type"
+      ],
+      "type": "object"
+    },
+    "ZaiThinkingType": {
+      "enum": [
+        "enabled",
+        "disabled"
+      ],
+      "type": "string"
     }
   },
   "description": "Base config deserialized from ~/.codex/config.toml.",

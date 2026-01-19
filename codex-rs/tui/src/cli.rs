@@ -98,7 +98,11 @@ pub struct Cli {
     #[arg(long = "search", default_value_t = false)]
     pub web_search: bool,
 
-    /// Additional directories that should be writable alongside the primary workspace.
+    /// Disable ZAI thinking capabilities.
+    #[arg(long = "no-thinking", default_value_t = false)]
+    pub no_thinking: bool,
+
+    /// Additional directories that should be treated as writable alongside the primary workspace.
     #[arg(long = "add-dir", value_name = "DIR", value_hint = ValueHint::DirPath)]
     pub add_dir: Vec<PathBuf>,
 

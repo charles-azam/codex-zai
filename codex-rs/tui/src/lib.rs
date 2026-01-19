@@ -152,6 +152,12 @@ pub async fn run_main(
             .push("web_search=\"live\"".to_string());
     }
 
+    if cli.no_thinking {
+        cli.config_overrides
+            .raw_overrides
+            .push("thinking=false".to_string());
+    }
+
     // When using `--oss`, let the bootstrapper pick the model (defaulting to
     // gpt-oss:20b) and ensure it is present locally. Also, force the built‑in
     let raw_overrides = cli.config_overrides.raw_overrides.clone();
@@ -275,6 +281,7 @@ pub async fn run_main(
         codex_linux_sandbox_exe,
         show_raw_agent_reasoning: cli.oss.then_some(true),
         additional_writable_roots: additional_dirs,
+        thinking: cli.no_thinking.then_some(false),
         ..Default::default()
     };
 
@@ -300,6 +307,11 @@ pub async fn run_main(
         std::process::exit(1);
     }
 
+    if config.model_provider.is_zai() && std::env::var("ZAI_API_KEY").is_err() {
+        eprintln!("Error: ZAI_API_KEY environment variable is not set.");
+        eprintln!("Please set it using: export ZAI_API_KEY=...");
+        std::process::exit(1);
+    }
     let log_dir = codex_core::config::log_dir(&config)?;
     std::fs::create_dir_all(&log_dir)?;
     // Open (or create) your log file, appending to it.
@@ -920,6 +932,11 @@ fn should_show_login_screen(login_status: LoginStatus, config: &Config) -> bool 
     // Only show the login screen for providers that actually require OpenAI auth
     // (OpenAI or equivalents). For OSS/other providers, skip login entirely.
     if !config.model_provider.requires_openai_auth {
+        return false;
+    }
+
+    // Safety check: if provider is ZAI, never show login screen.
+    if config.model_provider.is_zai() {
         return false;
     }
 
