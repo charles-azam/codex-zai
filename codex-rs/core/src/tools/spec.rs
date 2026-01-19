@@ -956,25 +956,28 @@ pub(crate) fn create_tools_json_for_chat_completions_api(
     let tools_json = responses_api_tools_json
         .into_iter()
         .filter_map(|mut tool| {
-            if tool.get("type") != Some(&serde_json::Value::String("function".to_string())) {
-                return None;
-            }
-
-            if let Some(map) = tool.as_object_mut() {
-                let name = map
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                // Remove "type" field as it is not needed in chat completions.
-                map.remove("type");
-                Some(json!({
-                    "type": "function",
-                    "name": name,
-                    "function": map,
-                }))
-            } else {
-                None
+            let tool_type = tool.get("type").and_then(serde_json::Value::as_str)?;
+            match tool_type {
+                "function" => {
+                    if let Some(map) = tool.as_object_mut() {
+                        let name = map
+                            .get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or_default()
+                            .to_string();
+                        // Remove "type" field as it is not needed in chat completions.
+                        map.remove("type");
+                        Some(json!({
+                            "type": "function",
+                            "name": name,
+                            "function": map,
+                        }))
+                    } else {
+                        None
+                    }
+                }
+                "web_search" => Some(tool),
+                _ => None,
             }
         })
         .collect::<Vec<serde_json::Value>>();
@@ -2412,6 +2415,22 @@ Examples of valid command strings:
                         },
                     },
                 }
+            })]
+        );
+    }
+
+    #[test]
+    fn chat_tools_include_web_search() {
+        let tools = vec![ToolSpec::WebSearch {
+            external_web_access: Some(true),
+        }];
+        let tools_json = create_tools_json_for_chat_completions_api(&tools).unwrap();
+
+        assert_eq!(
+            tools_json,
+            vec![json!({
+                "type": "web_search",
+                "external_web_access": true,
             })]
         );
     }

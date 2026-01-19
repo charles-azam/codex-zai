@@ -63,6 +63,7 @@ async fn run_request(input: Vec<ResponseItem>) -> Value {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 

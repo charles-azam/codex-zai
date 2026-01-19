@@ -401,6 +401,7 @@ mod tests {
             requires_openai_auth: false,
             chat_reasoning_field: crate::ChatReasoningField::Reasoning,
             chat_developer_role: crate::ChatDeveloperRole::Developer,
+            thinking: None,
             extra_body: None,
         }
     }

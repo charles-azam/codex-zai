@@ -1223,6 +1223,7 @@ async fn azure_responses_request_includes_store_and_reasoning_ids() {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 
@@ -1748,6 +1749,7 @@ async fn azure_overrides_assign_properties_used_for_responses_url() {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 
@@ -1835,6 +1837,7 @@ async fn env_var_overrides_loaded_auth() {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 

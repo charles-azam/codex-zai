@@ -85,6 +85,7 @@ async fn retries_on_early_close() {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 

@@ -60,6 +60,7 @@ async fn responses_stream_includes_subagent_header_on_review() {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 
@@ -158,6 +159,7 @@ async fn responses_stream_includes_subagent_header_on_other() {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 
@@ -312,6 +314,7 @@ async fn responses_respects_model_info_overrides_from_config() {
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     };
 

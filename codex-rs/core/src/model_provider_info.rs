@@ -88,6 +88,41 @@ impl ChatDeveloperRole {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ChatThinkingType {
+    #[default]
+    Enabled,
+    Disabled,
+}
+
+impl ChatThinkingType {
+    fn as_str(self) -> &'static str {
+        match self {
+            ChatThinkingType::Enabled => "enabled",
+            ChatThinkingType::Disabled => "disabled",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct ChatThinkingConfig {
+    #[serde(rename = "type")]
+    pub r#type: ChatThinkingType,
+    #[serde(default)]
+    pub clear_thinking: bool,
+}
+
+impl ChatThinkingConfig {
+    fn to_value(&self) -> Value {
+        json!({
+            "type": self.r#type.as_str(),
+            "clear_thinking": self.clear_thinking,
+        })
+    }
+}
+
 /// Serializable representation of a provider definition.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[schemars(deny_unknown_fields)]
@@ -150,12 +185,31 @@ pub struct ModelProviderInfo {
     #[serde(default)]
     pub chat_developer_role: ChatDeveloperRole,
 
+    /// Thinking configuration to use in Chat Completions requests.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<ChatThinkingConfig>,
+
     /// Additional JSON fields merged into the request body.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra_body: Option<Value>,
 }
 
 impl ModelProviderInfo {
+    fn extra_body_with_thinking(&self) -> Option<Value> {
+        let Some(thinking) = self.thinking.as_ref() else {
+            return self.extra_body.clone();
+        };
+
+        let mut combined = match self.extra_body.clone() {
+            Some(Value::Object(map)) => map,
+            None => serde_json::Map::new(),
+            Some(other) => return Some(other),
+        };
+
+        combined.insert("thinking".to_string(), thinking.to_value());
+        Some(Value::Object(combined))
+    }
+
     fn build_header_map(&self) -> crate::error::Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         if let Some(extra) = &self.http_headers {
@@ -218,7 +272,7 @@ impl ModelProviderInfo {
             stream_idle_timeout: self.stream_idle_timeout(),
             chat_reasoning_field: self.chat_reasoning_field.as_str().to_string(),
             chat_developer_role: self.chat_developer_role.as_str().to_string(),
-            extra_body: self.extra_body.clone(),
+            extra_body: self.extra_body_with_thinking(),
         })
     }
 
@@ -271,7 +325,7 @@ impl ModelProviderInfo {
     pub fn create_openai_provider() -> ModelProviderInfo {
         ModelProviderInfo {
             name: OPENAI_PROVIDER_NAME.into(),
-            base_url: Some("https://api.z.ai/api/paas/v4".to_string()),
+            base_url: Some("https://api.z.ai/api/coding/paas/v4".to_string()),
             env_key: Some("ZAI_API_KEY".to_string()),
             env_key_instructions: Some("Set ZAI_API_KEY to your Z.ai API key.".to_string()),
             experimental_bearer_token: None,
@@ -286,12 +340,33 @@ impl ModelProviderInfo {
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::ReasoningContent,
             chat_developer_role: ChatDeveloperRole::System,
-            extra_body: Some(json!({
-                "thinking": {
-                    "type": "enabled",
-                    "clear_thinking": false
-                }
-            })),
+            thinking: Some(ChatThinkingConfig {
+                r#type: ChatThinkingType::Enabled,
+                clear_thinking: false,
+            }),
+            extra_body: None,
+        }
+    }
+
+    pub fn create_zai_provider(base_url: &str, name: &str, thinking: ChatThinkingConfig) -> Self {
+        ModelProviderInfo {
+            name: name.to_string(),
+            base_url: Some(base_url.to_string()),
+            env_key: Some("ZAI_API_KEY".to_string()),
+            env_key_instructions: Some("Set ZAI_API_KEY to your Z.ai API key.".to_string()),
+            experimental_bearer_token: None,
+            wire_api: WireApi::Chat,
+            query_params: None,
+            http_headers: None,
+            env_http_headers: None,
+            request_max_retries: None,
+            stream_max_retries: None,
+            stream_idle_timeout_ms: None,
+            requires_openai_auth: false,
+            chat_reasoning_field: ChatReasoningField::ReasoningContent,
+            chat_developer_role: ChatDeveloperRole::System,
+            thinking: Some(thinking),
+            extra_body: None,
         }
     }
 
@@ -312,11 +387,33 @@ pub fn built_in_model_providers() -> HashMap<String, ModelProviderInfo> {
     use ModelProviderInfo as P;
 
     // We do not want to be in the business of adjucating which third-party
-    // providers are bundled with Codex CLI, so we only include the OpenAI and
-    // open source ("oss") providers by default. Users are encouraged to add to
-    // `model_providers` in config.toml to add their own providers.
+    // providers are bundled with Codex CLI, so we only include the OpenAI,
+    // Z.ai, and open source ("oss") providers by default. Users are encouraged
+    // to add to `model_providers` in config.toml to add their own providers.
     [
         ("openai", P::create_openai_provider()),
+        (
+            "zai",
+            P::create_zai_provider(
+                "https://api.z.ai/api/paas/v4",
+                "Z.ai Standard",
+                ChatThinkingConfig {
+                    r#type: ChatThinkingType::Disabled,
+                    clear_thinking: false,
+                },
+            ),
+        ),
+        (
+            "zai-coding",
+            P::create_zai_provider(
+                "https://api.z.ai/api/coding/paas/v4",
+                "Z.ai Coding",
+                ChatThinkingConfig {
+                    r#type: ChatThinkingType::Enabled,
+                    clear_thinking: false,
+                },
+            ),
+        ),
         (
             OLLAMA_OSS_PROVIDER_ID,
             create_oss_provider(DEFAULT_OLLAMA_PORT, WireApi::Responses),
@@ -372,6 +469,7 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         requires_openai_auth: false,
         chat_reasoning_field: ChatReasoningField::Reasoning,
         chat_developer_role: ChatDeveloperRole::Developer,
+        thinking: None,
         extra_body: None,
     }
 }
@@ -403,6 +501,7 @@ base_url = "http://localhost:11434/v1"
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
             chat_developer_role: ChatDeveloperRole::Developer,
+            thinking: None,
             extra_body: None,
         };
 
@@ -436,6 +535,7 @@ query_params = { api-version = "2025-04-01-preview" }
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
             chat_developer_role: ChatDeveloperRole::Developer,
+            thinking: None,
             extra_body: None,
         };
 
@@ -472,6 +572,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
             chat_developer_role: ChatDeveloperRole::Developer,
+            thinking: None,
             extra_body: None,
         };
 
@@ -506,6 +607,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 requires_openai_auth: false,
                 chat_reasoning_field: ChatReasoningField::Reasoning,
                 chat_developer_role: ChatDeveloperRole::Developer,
+                thinking: None,
                 extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");
@@ -531,6 +633,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             requires_openai_auth: false,
             chat_reasoning_field: ChatReasoningField::Reasoning,
             chat_developer_role: ChatDeveloperRole::Developer,
+            thinking: None,
             extra_body: None,
         };
         let named_api = named_provider.to_api_provider(None).expect("api provider");
@@ -558,6 +661,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 requires_openai_auth: false,
                 chat_reasoning_field: ChatReasoningField::Reasoning,
                 chat_developer_role: ChatDeveloperRole::Developer,
+                thinking: None,
                 extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");

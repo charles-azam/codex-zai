@@ -532,6 +532,29 @@
         "reasoning_content"
       ]
     },
+    "ChatThinkingConfig": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "clear_thinking": {
+          "default": false,
+          "type": "boolean"
+        },
+        "type": {
+          "$ref": "#/definitions/ChatThinkingType"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ChatThinkingType": {
+      "type": "string",
+      "enum": [
+        "enabled",
+        "disabled"
+      ]
+    },
     "ConfigProfile": {
       "description": "Collection of common configuration options that a user can define as a unit in `config.toml`.",
       "type": "object",
@@ -841,6 +864,14 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "thinking": {
+          "description": "Thinking configuration to use in Chat Completions requests.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ChatThinkingConfig"
+            }
+          ]
         },
         "wire_api": {
           "description": "Which wire protocol this provider expects.",

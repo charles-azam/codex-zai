@@ -345,9 +345,6 @@ fn push_tool_call_message(
         tool_calls.push(tool_call);
         if let Some(reasoning) = reasoning {
             if let Some(Value::String(existing)) = obj.get_mut(reasoning_field) {
-                if !existing.is_empty() {
-                    existing.push('\n');
-                }
                 existing.push_str(reasoning);
             } else {
                 obj.insert(
