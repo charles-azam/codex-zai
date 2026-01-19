@@ -252,7 +252,7 @@ pub enum ConfigLayerSource {
         file: AbsolutePathBuf,
     },
 
-    /// Path to a .codex/ folder within a project. There could be multiple of
+    /// Path to a .codex-zai/ folder within a project. There could be multiple of
     /// these between `cwd` and the project/repo root.
     #[serde(rename_all = "camelCase")]
     #[ts(rename_all = "camelCase")]
@@ -2426,7 +2426,7 @@ mod tests {
                 },
                 CoreUserInput::Skill {
                     name: "skill-creator".to_string(),
-                    path: PathBuf::from("/repo/.codex/skills/skill-creator/SKILL.md"),
+                    path: PathBuf::from("/repo/.codex-zai/skills/skill-creator/SKILL.md"),
                 },
             ],
         });
@@ -2448,7 +2448,7 @@ mod tests {
                     },
                     UserInput::Skill {
                         name: "skill-creator".to_string(),
-                        path: PathBuf::from("/repo/.codex/skills/skill-creator/SKILL.md"),
+                        path: PathBuf::from("/repo/.codex-zai/skills/skill-creator/SKILL.md"),
                     },
                 ],
             }

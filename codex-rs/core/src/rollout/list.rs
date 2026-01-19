@@ -289,7 +289,7 @@ pub(crate) async fn get_threads(
 
 /// Load thread file paths from disk using directory traversal.
 ///
-/// Directory layout: `~/.codex/sessions/YYYY/MM/DD/rollout-YYYY-MM-DDThh-mm-ss-<uuid>.jsonl`
+/// Directory layout: `~/.codex-zai/sessions/YYYY/MM/DD/rollout-YYYY-MM-DDThh-mm-ss-<uuid>.jsonl`
 /// Returned newest (based on sort key) first.
 async fn traverse_directories_for_paths(
     root: PathBuf,

@@ -13,6 +13,27 @@ pub const HIDE_GPT_5_1_CODEX_MAX_MIGRATION_PROMPT_CONFIG: &str =
 static PRESETS: Lazy<Vec<ModelPreset>> = Lazy::new(|| {
     vec![
         ModelPreset {
+            id: "glm-4.7".to_string(),
+            model: "glm-4.7".to_string(),
+            display_name: "glm-4.7".to_string(),
+            description: "Z.ai GLM-4.7 coding model.".to_string(),
+            default_reasoning_effort: ReasoningEffort::Medium,
+            supported_reasoning_efforts: vec![
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::None,
+                    description: "Disable thinking for faster responses".to_string(),
+                },
+                ReasoningEffortPreset {
+                    effort: ReasoningEffort::Medium,
+                    description: "Enable thinking for deeper reasoning".to_string(),
+                },
+            ],
+            is_default: true,
+            upgrade: None,
+            show_in_picker: true,
+            supported_in_api: true,
+        },
+        ModelPreset {
             id: "gpt-5.2-codex".to_string(),
             model: "gpt-5.2-codex".to_string(),
             display_name: "gpt-5.2-codex".to_string(),
@@ -36,7 +57,7 @@ static PRESETS: Lazy<Vec<ModelPreset>> = Lazy::new(|| {
                     description: "Extra high reasoning depth for complex problems".to_string(),
                 },
             ],
-            is_default: true,
+            is_default: false,
             upgrade: None,
             show_in_picker: true,
             supported_in_api: true,

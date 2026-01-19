@@ -49,6 +49,7 @@ async fn list_models_returns_chatgpt_models() -> Result<()> {
 
 fn expected_models_for_api_key() -> Vec<ModelPreset> {
     vec![
+        glm_47(),
         gpt_52_codex(),
         gpt_5_1_codex_max(),
         gpt_5_1_codex_mini(),
@@ -67,6 +68,7 @@ fn expected_models_for_chatgpt() -> Vec<ModelPreset> {
     let mut gpt_5_1_codex_max = gpt_5_1_codex_max();
     gpt_5_1_codex_max.is_default = false;
     vec![
+        glm_47(),
         gpt_52_codex(),
         gpt_5_1_codex_max,
         gpt_5_1_codex_mini(),
@@ -79,6 +81,30 @@ fn expected_models_for_chatgpt() -> Vec<ModelPreset> {
         gpt_5(),
         gpt_5_1(),
     ]
+}
+
+fn glm_47() -> ModelPreset {
+    ModelPreset {
+        id: "glm-4.7".to_string(),
+        model: "glm-4.7".to_string(),
+        display_name: "glm-4.7".to_string(),
+        description: "Z.ai GLM-4.7 coding model.".to_string(),
+        default_reasoning_effort: ReasoningEffort::Medium,
+        supported_reasoning_efforts: vec![
+            effort(
+                ReasoningEffort::None,
+                "Disable thinking for faster responses",
+            ),
+            effort(
+                ReasoningEffort::Medium,
+                "Enable thinking for deeper reasoning",
+            ),
+        ],
+        is_default: true,
+        upgrade: None,
+        show_in_picker: true,
+        supported_in_api: true,
+    }
 }
 
 fn gpt_52_codex() -> ModelPreset {
@@ -106,7 +132,7 @@ fn gpt_52_codex() -> ModelPreset {
                 "Extra high reasoning depth for complex problems",
             ),
         ],
-        is_default: true,
+        is_default: false,
         upgrade: None,
         show_in_picker: true,
         supported_in_api: true,

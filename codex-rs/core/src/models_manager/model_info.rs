@@ -113,6 +113,19 @@ pub(crate) fn find_model_info_for_slug(slug: &str) -> ModelInfo {
             supports_reasoning_summaries: false,
             context_window: Some(1_047_576),
         )
+    } else if slug.starts_with("glm-4.7") {
+        model_info!(
+            slug,
+            base_instructions: BASE_INSTRUCTIONS_WITH_APPLY_PATCH.to_string(),
+            apply_patch_tool_type: Some(ApplyPatchToolType::Freeform),
+            shell_type: ConfigShellToolType::ShellCommand,
+            supports_parallel_tool_calls: true,
+            supports_reasoning_summaries: false,
+            support_verbosity: false,
+            default_reasoning_level: Some(ReasoningEffort::Medium),
+            supported_reasoning_levels: supported_reasoning_level_off_on(),
+            context_window: Some(CONTEXT_WINDOW_272K),
+        )
     } else if slug.starts_with("gpt-oss") || slug.starts_with("openai/gpt-oss") {
         model_info!(
             slug,
@@ -299,6 +312,19 @@ fn supported_reasoning_level_low_medium_high() -> Vec<ReasoningEffortPreset> {
         ReasoningEffortPreset {
             effort: ReasoningEffort::High,
             description: "Greater reasoning depth for complex problems".to_string(),
+        },
+    ]
+}
+
+fn supported_reasoning_level_off_on() -> Vec<ReasoningEffortPreset> {
+    vec![
+        ReasoningEffortPreset {
+            effort: ReasoningEffort::None,
+            description: "Disable thinking for faster responses".to_string(),
+        },
+        ReasoningEffortPreset {
+            effort: ReasoningEffort::Medium,
+            description: "Enable thinking for deeper reasoning".to_string(),
         },
     ]
 }

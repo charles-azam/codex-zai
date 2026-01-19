@@ -45,6 +45,7 @@ use http::HeaderValue;
 use http::StatusCode as HttpStatusCode;
 use reqwest::StatusCode;
 use serde_json::Value;
+use serde_json::json;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::warn;
@@ -463,10 +464,14 @@ impl ModelClientSession {
                 Some(manager) => manager.auth().await,
                 None => None,
             };
-            let api_provider = self
+            let mut api_provider = self
                 .state
                 .provider
                 .to_api_provider(auth.as_ref().map(|a| a.mode))?;
+            if api_provider.wire == codex_api::provider::WireApi::Chat {
+                api_provider.chat_extra_body =
+                    apply_chat_thinking_override(api_provider.chat_extra_body, self.state.effort);
+            }
             let api_auth = auth_provider_from_auth(auth.clone(), &self.state.provider)?;
             let transport = ReqwestTransport::new(build_reqwest_client());
             let (request_telemetry, sse_telemetry) = self.build_streaming_telemetry();
@@ -609,6 +614,50 @@ impl ModelClientSession {
         let sse_telemetry: Arc<dyn SseTelemetry> = telemetry;
         (request_telemetry, sse_telemetry)
     }
+}
+
+fn apply_chat_thinking_override(
+    extra_body: Option<Value>,
+    effort: Option<ReasoningEffortConfig>,
+) -> Option<Value> {
+    let Some(mut body) = extra_body else {
+        return None;
+    };
+    let Some(effort) = effort else {
+        return Some(body);
+    };
+    let enabled = effort != ReasoningEffortConfig::None;
+
+    let Value::Object(obj) = &mut body else {
+        return Some(body);
+    };
+
+    let thinking_entry = obj
+        .entry("thinking".to_string())
+        .or_insert_with(|| json!({}));
+    if let Value::Object(thinking_obj) = thinking_entry {
+        thinking_obj.insert(
+            "type".to_string(),
+            Value::String(if enabled {
+                "enabled".to_string()
+            } else {
+                "disabled".to_string()
+            }),
+        );
+        thinking_obj
+            .entry("clear_thinking".to_string())
+            .or_insert(Value::Bool(false));
+    } else {
+        obj.insert(
+            "thinking".to_string(),
+            json!({
+                "type": if enabled { "enabled" } else { "disabled" },
+                "clear_thinking": false
+            }),
+        );
+    }
+
+    Some(body)
 }
 
 impl ModelClient {

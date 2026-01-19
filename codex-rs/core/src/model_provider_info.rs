@@ -2,7 +2,7 @@
 //!
 //! Providers can be defined in two places:
 //!   1. Built-in defaults compiled into the binary so Codex works out-of-the-box.
-//!   2. User-defined entries inside `~/.codex/config.toml` under the `model_providers`
+//!   2. User-defined entries inside `~/.codex-zai/config.toml` under the `model_providers`
 //!      key. These override or extend the defaults at runtime.
 
 use codex_api::Provider as ApiProvider;
@@ -15,6 +15,7 @@ use http::header::HeaderValue;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::json;
 use std::collections::HashMap;
 use std::env::VarError;
 use std::time::Duration;
@@ -30,6 +31,8 @@ const MAX_REQUEST_MAX_RETRIES: u64 = 100;
 pub const CHAT_WIRE_API_DEPRECATION_SUMMARY: &str = r#"Support for the "chat" wire API is deprecated and will soon be removed. Update your model provider definition in config.toml to use wire_api = "responses"."#;
 
 const OPENAI_PROVIDER_NAME: &str = "OpenAI";
+const ZAI_PROVIDER_NAME: &str = "Z.ai";
+const ZAI_PROVIDER_ID: &str = "zai";
 
 /// Wire protocol that the provider speaks. Most third-party services only
 /// implement the classic OpenAI Chat Completions JSON schema, whereas OpenAI
@@ -105,6 +108,15 @@ pub struct ModelProviderInfo {
     /// and API key (if needed) comes from the "env_key" environment variable.
     #[serde(default)]
     pub requires_openai_auth: bool,
+
+    /// Override the role used for developer messages in Chat requests.
+    pub chat_developer_role: Option<String>,
+
+    /// Field name used for preserved reasoning in Chat requests/responses.
+    pub chat_reasoning_field: Option<String>,
+
+    /// Extra JSON body to merge into Chat Completions requests.
+    pub chat_extra_body: Option<serde_json::Value>,
 }
 
 impl ModelProviderInfo {
@@ -168,6 +180,9 @@ impl ModelProviderInfo {
             headers,
             retry,
             stream_idle_timeout: self.stream_idle_timeout(),
+            chat_developer_role: self.chat_developer_role.clone(),
+            chat_reasoning_field: self.chat_reasoning_field.clone(),
+            chat_extra_body: self.chat_extra_body.clone(),
         })
     }
 
@@ -254,6 +269,39 @@ impl ModelProviderInfo {
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: true,
+            chat_developer_role: None,
+            chat_reasoning_field: None,
+            chat_extra_body: None,
+        }
+    }
+
+    pub fn create_zai_provider() -> ModelProviderInfo {
+        let base_url = std::env::var("ZAI_OPENAI_BASE_URL")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| "https://api.z.ai/api/coding/paas/v4".to_string());
+        ModelProviderInfo {
+            name: ZAI_PROVIDER_NAME.into(),
+            base_url: Some(base_url),
+            env_key: Some("ZAI_API_KEY".to_string()),
+            env_key_instructions: Some("Set ZAI_API_KEY to your Z.ai API key.".to_string()),
+            experimental_bearer_token: None,
+            wire_api: WireApi::Chat,
+            query_params: None,
+            http_headers: None,
+            env_http_headers: None,
+            request_max_retries: None,
+            stream_max_retries: None,
+            stream_idle_timeout_ms: None,
+            requires_openai_auth: false,
+            chat_developer_role: Some("system".to_string()),
+            chat_reasoning_field: Some("reasoning_content".to_string()),
+            chat_extra_body: Some(json!({
+                "thinking": {
+                    "type": "enabled",
+                    "clear_thinking": false
+                }
+            })),
         }
     }
 
@@ -273,11 +321,11 @@ pub const OLLAMA_CHAT_PROVIDER_ID: &str = "ollama-chat";
 pub fn built_in_model_providers() -> HashMap<String, ModelProviderInfo> {
     use ModelProviderInfo as P;
 
-    // We do not want to be in the business of adjucating which third-party
-    // providers are bundled with Codex CLI, so we only include the OpenAI and
-    // open source ("oss") providers by default. Users are encouraged to add to
-    // `model_providers` in config.toml to add their own providers.
+    // Keep the built-in list small and focused: Z.ai (default), OpenAI, and
+    // open source ("oss") providers. Users can extend `model_providers` in
+    // config.toml to add their own providers.
     [
+        (ZAI_PROVIDER_ID, P::create_zai_provider()),
         ("openai", P::create_openai_provider()),
         (
             OLLAMA_OSS_PROVIDER_ID,
@@ -332,6 +380,9 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         stream_max_retries: None,
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
+        chat_developer_role: None,
+        chat_reasoning_field: None,
+        chat_extra_body: None,
     }
 }
 
@@ -360,6 +411,9 @@ base_url = "http://localhost:11434/v1"
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_developer_role: None,
+            chat_reasoning_field: None,
+            chat_extra_body: None,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -390,6 +444,9 @@ query_params = { api-version = "2025-04-01-preview" }
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_developer_role: None,
+            chat_reasoning_field: None,
+            chat_extra_body: None,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -423,6 +480,9 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_developer_role: None,
+            chat_reasoning_field: None,
+            chat_extra_body: None,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -454,6 +514,9 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 stream_max_retries: None,
                 stream_idle_timeout_ms: None,
                 requires_openai_auth: false,
+                chat_developer_role: None,
+                chat_reasoning_field: None,
+                chat_extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");
             assert!(
@@ -476,6 +539,9 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
+            chat_developer_role: None,
+            chat_reasoning_field: None,
+            chat_extra_body: None,
         };
         let named_api = named_provider.to_api_provider(None).expect("api provider");
         assert!(named_api.is_azure_responses_endpoint());
@@ -500,6 +566,9 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
                 stream_max_retries: None,
                 stream_idle_timeout_ms: None,
                 requires_openai_auth: false,
+                chat_developer_role: None,
+                chat_reasoning_field: None,
+                chat_extra_body: None,
             };
             let api = provider.to_api_provider(None).expect("api provider");
             assert!(

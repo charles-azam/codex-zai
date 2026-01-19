@@ -55,6 +55,9 @@ pub struct Provider {
     pub headers: HeaderMap,
     pub retry: RetryConfig,
     pub stream_idle_timeout: Duration,
+    pub chat_developer_role: Option<String>,
+    pub chat_reasoning_field: Option<String>,
+    pub chat_extra_body: Option<serde_json::Value>,
 }
 
 impl Provider {

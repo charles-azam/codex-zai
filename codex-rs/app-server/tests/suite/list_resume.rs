@@ -69,37 +69,57 @@ async fn test_list_and_resume_conversations() -> Result<()> {
     let ListConversationsResponse { items, next_cursor } =
         to_response::<ListConversationsResponse>(resp)?;
 
-    assert_eq!(items.len(), 2);
-    // Newest first; preview text should match
-    assert_eq!(items[0].preview, "Hello A");
-    assert_eq!(items[1].preview, "Hello B");
-    assert_eq!(items[0].model_provider, "openai");
-    assert_eq!(items[1].model_provider, "openai");
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].preview, "Hello C");
+    assert_eq!(items[0].model_provider, "zai");
     assert!(items[0].path.is_absolute());
-    assert!(next_cursor.is_some());
+    assert!(next_cursor.is_none());
 
-    // Request the next page using the cursor
-    let req_id2 = mcp
+    // Explicit provider filter should return the OpenAI rollouts.
+    let openai_req_id = mcp
         .send_list_conversations_request(ListConversationsParams {
             page_size: Some(2),
-            cursor: next_cursor,
-            model_providers: None,
+            cursor: None,
+            model_providers: Some(vec!["openai".to_string()]),
         })
         .await?;
-    let resp2: JSONRPCResponse = timeout(
+    let openai_resp: JSONRPCResponse = timeout(
         DEFAULT_READ_TIMEOUT,
-        mcp.read_stream_until_response_message(RequestId::Integer(req_id2)),
+        mcp.read_stream_until_response_message(RequestId::Integer(openai_req_id)),
     )
     .await??;
     let ListConversationsResponse {
-        items: items2,
-        next_cursor: next2,
+        items: openai_items,
+        next_cursor: openai_next,
         ..
-    } = to_response::<ListConversationsResponse>(resp2)?;
-    assert_eq!(items2.len(), 1);
-    assert_eq!(items2[0].preview, "Hello C");
-    assert_eq!(items2[0].model_provider, "openai");
-    assert_eq!(next2, None);
+    } = to_response::<ListConversationsResponse>(openai_resp)?;
+    assert_eq!(openai_items.len(), 2);
+    // Newest first; preview text should match
+    assert_eq!(openai_items[0].preview, "Hello A");
+    assert_eq!(openai_items[1].preview, "Hello B");
+    assert_eq!(openai_items[0].model_provider, "openai");
+    assert_eq!(openai_items[1].model_provider, "openai");
+    if let Some(openai_cursor) = openai_next {
+        let openai_req_id2 = mcp
+            .send_list_conversations_request(ListConversationsParams {
+                page_size: Some(2),
+                cursor: Some(openai_cursor),
+                model_providers: Some(vec!["openai".to_string()]),
+            })
+            .await?;
+        let openai_resp2: JSONRPCResponse = timeout(
+            DEFAULT_READ_TIMEOUT,
+            mcp.read_stream_until_response_message(RequestId::Integer(openai_req_id2)),
+        )
+        .await??;
+        let ListConversationsResponse {
+            items: openai_items2,
+            next_cursor: openai_next2,
+            ..
+        } = to_response::<ListConversationsResponse>(openai_resp2)?;
+        assert!(openai_items2.is_empty());
+        assert!(openai_next2.is_none());
+    }
 
     // Add a conversation with an explicit non-OpenAI provider for filter tests.
     create_fake_rollout(

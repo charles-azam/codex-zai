@@ -8,7 +8,7 @@ const ORCHESTRATOR_PROMPT: &str = include_str!("../../templates/agents/orchestra
 /// Base instructions for the worker role.
 const WORKER_PROMPT: &str = include_str!("../../gpt-5.2-codex_prompt.md");
 /// Default worker model override used by the worker role.
-const WORKER_MODEL: &str = "gpt-5.2-codex";
+const WORKER_MODEL: &str = "glm-4.7";
 
 /// Enumerated list of all supported agent roles.
 const ALL_ROLES: [AgentRole; 3] = [

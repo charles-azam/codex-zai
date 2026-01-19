@@ -81,6 +81,9 @@ async fn retries_on_early_close() {
         stream_max_retries: Some(1),
         stream_idle_timeout_ms: Some(2000),
         requires_openai_auth: false,
+        chat_developer_role: None,
+        chat_reasoning_field: None,
+        chat_extra_body: None,
     };
 
     let TestCodex { codex, .. } = test_codex()

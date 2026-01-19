@@ -31,8 +31,8 @@ use crate::models_manager::model_presets::builtin_model_presets;
 const MODEL_CACHE_FILE: &str = "models_cache.json";
 const DEFAULT_MODEL_CACHE_TTL: Duration = Duration::from_secs(300);
 const MODELS_REFRESH_TIMEOUT: Duration = Duration::from_secs(5);
-const OPENAI_DEFAULT_API_MODEL: &str = "gpt-5.2-codex";
-const OPENAI_DEFAULT_CHATGPT_MODEL: &str = "gpt-5.2-codex";
+const OPENAI_DEFAULT_API_MODEL: &str = "glm-4.7";
+const OPENAI_DEFAULT_CHATGPT_MODEL: &str = "glm-4.7";
 const CODEX_AUTO_BALANCED_MODEL: &str = "codex-auto-balanced";
 
 /// Strategy for refreshing available models.
@@ -408,6 +408,9 @@ mod tests {
             stream_max_retries: Some(0),
             stream_idle_timeout_ms: Some(5_000),
             requires_openai_auth: false,
+            chat_developer_role: None,
+            chat_reasoning_field: None,
+            chat_extra_body: None,
         }
     }
 

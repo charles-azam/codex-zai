@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ConfigToml",
-  "description": "Base config deserialized from ~/.codex/config.toml.",
+  "description": "Base config deserialized from ~/.codex-zai/config.toml.",
   "type": "object",
   "properties": {
     "analytics": {
@@ -191,7 +191,7 @@
       "type": "boolean"
     },
     "history": {
-      "description": "Settings that govern if and what will be written to `~/.codex/history.jsonl`.",
+      "description": "Settings that govern if and what will be written to `~/.codex-zai/history.jsonl`.",
       "default": null,
       "allOf": [
         {
@@ -324,7 +324,7 @@
       "minimum": 0.0
     },
     "project_root_markers": {
-      "description": "Markers used to detect the project root when searching parent directories for `.codex` folders. Defaults to [\".git\"] when unset.",
+      "description": "Markers used to detect the project root when searching parent directories for `.codex-zai` folders. Defaults to [\".git\"] when unset.",
       "default": null,
       "type": "array",
       "items": {
@@ -359,12 +359,12 @@
     },
     "shell_environment_policy": {
       "default": {
-        "inherit": null,
-        "ignore_default_excludes": null,
         "exclude": null,
-        "set": null,
+        "experimental_use_profile": null,
+        "ignore_default_excludes": null,
         "include_only": null,
-        "experimental_use_profile": null
+        "inherit": null,
+        "set": null
       },
       "allOf": [
         {
@@ -701,7 +701,7 @@
       "additionalProperties": false
     },
     "History": {
-      "description": "Settings that govern if and what will be written to `~/.codex/history.jsonl`.",
+      "description": "Settings that govern if and what will be written to `~/.codex-zai/history.jsonl`.",
       "type": "object",
       "required": [
         "persistence"
@@ -751,6 +751,17 @@
       "properties": {
         "base_url": {
           "description": "Base URL for the provider's OpenAI-compatible API.",
+          "type": "string"
+        },
+        "chat_developer_role": {
+          "description": "Override the role used for developer messages in Chat requests.",
+          "type": "string"
+        },
+        "chat_extra_body": {
+          "description": "Extra JSON body to merge into Chat Completions requests."
+        },
+        "chat_reasoning_field": {
+          "description": "Field name used for preserved reasoning in Chat requests/responses.",
           "type": "string"
         },
         "env_http_headers": {

@@ -76,6 +76,9 @@ fn provider(name: &str, wire: WireApi) -> Provider {
             retry_transport: true,
         },
         stream_idle_timeout: Duration::from_millis(50),
+        chat_developer_role: None,
+        chat_reasoning_field: None,
+        chat_extra_body: None,
     }
 }
 

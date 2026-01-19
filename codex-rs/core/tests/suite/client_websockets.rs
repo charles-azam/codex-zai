@@ -158,6 +158,9 @@ fn websocket_provider(server: &WebSocketTestServer) -> ModelProviderInfo {
         stream_max_retries: Some(0),
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
+        chat_developer_role: None,
+        chat_reasoning_field: None,
+        chat_extra_body: None,
     }
 }
 

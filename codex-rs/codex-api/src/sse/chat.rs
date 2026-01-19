@@ -158,7 +158,10 @@ pub async fn process_chat_sse<S>(
 
         for choice in choices {
             if let Some(delta) = choice.get("delta") {
-                if let Some(reasoning) = delta.get("reasoning") {
+                if let Some(reasoning) = delta
+                    .get("reasoning")
+                    .or_else(|| delta.get("reasoning_content"))
+                {
                     if let Some(text) = reasoning.as_str() {
                         append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string())
                             .await;
@@ -245,7 +248,9 @@ pub async fn process_chat_sse<S>(
             }
 
             if let Some(message) = choice.get("message")
-                && let Some(reasoning) = message.get("reasoning")
+                && let Some(reasoning) = message
+                    .get("reasoning")
+                    .or_else(|| message.get("reasoning_content"))
             {
                 if let Some(text) = reasoning.as_str() {
                     append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string()).await;

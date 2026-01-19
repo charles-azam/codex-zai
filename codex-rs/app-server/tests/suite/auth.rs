@@ -116,7 +116,7 @@ async fn get_auth_status_no_auth() -> Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn get_auth_status_with_api_key() -> Result<()> {
     let codex_home = TempDir::new()?;
-    create_config_toml(codex_home.path())?;
+    create_config_toml_custom_provider(codex_home.path(), true)?;
 
     let mut mcp = McpProcess::new(codex_home.path()).await?;
     timeout(DEFAULT_READ_TIMEOUT, mcp.initialize()).await??;
@@ -177,7 +177,7 @@ async fn get_auth_status_with_api_key_when_auth_not_required() -> Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn get_auth_status_with_api_key_no_include_token() -> Result<()> {
     let codex_home = TempDir::new()?;
-    create_config_toml(codex_home.path())?;
+    create_config_toml_custom_provider(codex_home.path(), true)?;
 
     let mut mcp = McpProcess::new(codex_home.path()).await?;
     timeout(DEFAULT_READ_TIMEOUT, mcp.initialize()).await??;

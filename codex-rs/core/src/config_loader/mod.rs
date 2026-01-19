@@ -10,6 +10,7 @@ mod state;
 #[cfg(test)]
 mod tests;
 
+use crate::config::CODEX_CONFIG_DIR_NAME;
 use crate::config::CONFIG_TOML_FILE;
 use crate::config::ConfigToml;
 use crate::config_loader::config_requirements::ConfigRequirementsWithSources;
@@ -65,8 +66,8 @@ const DEFAULT_PROJECT_ROOT_MARKERS: &[&str] = &[".git"];
 /// - system    `/etc/codex/config.toml`
 /// - user      `${CODEX_HOME}/config.toml`
 /// - cwd       `${PWD}/config.toml`
-/// - tree      parent directories up to root looking for `./.codex/config.toml`
-/// - repo      `$(git rev-parse --show-toplevel)/.codex/config.toml`
+/// - tree      parent directories up to root looking for `./.codex-zai/config.toml`
+/// - repo      `$(git rev-parse --show-toplevel)/.codex-zai/config.toml`
 /// - runtime   e.g., --config flags, model selector in UI
 ///
 /// (*) Only available on macOS via managed device profiles.
@@ -494,7 +495,7 @@ async fn load_project_layers(
 
     let mut layers = Vec::new();
     for dir in dirs {
-        let dot_codex = dir.join(".codex");
+        let dot_codex = dir.join(CODEX_CONFIG_DIR_NAME);
         if !tokio::fs::metadata(&dot_codex)
             .await
             .map(|meta| meta.is_dir())

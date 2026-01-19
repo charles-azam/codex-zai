@@ -90,6 +90,7 @@ pub use codex_git::GhostSnapshotConfig;
 pub(crate) const PROJECT_DOC_MAX_BYTES: usize = 32 * 1024; // 32 KiB
 
 pub const CONFIG_TOML_FILE: &str = "config.toml";
+pub const CODEX_CONFIG_DIR_NAME: &str = ".codex-zai";
 
 #[cfg(test)]
 pub(crate) fn test_config() -> Config {
@@ -170,7 +171,7 @@ pub struct Config {
     /// appends one extra argument containing a JSON payload describing the
     /// event.
     ///
-    /// Example `~/.codex/config.toml` snippet:
+    /// Example `~/.codex-zai/config.toml` snippet:
     ///
     /// ```toml
     /// notify = ["notify-send", "Codex"]
@@ -295,11 +296,11 @@ pub struct Config {
     /// Token budget applied when storing tool/function outputs in the context manager.
     pub tool_output_token_limit: Option<usize>,
 
-    /// Directory containing all Codex state (defaults to `~/.codex` but can be
+    /// Directory containing all Codex state (defaults to `~/.codex-zai` but can be
     /// overridden by the `CODEX_HOME` environment variable).
     pub codex_home: PathBuf,
 
-    /// Settings that govern if and what will be written to `~/.codex/history.jsonl`.
+    /// Settings that govern if and what will be written to `~/.codex-zai/history.jsonl`.
     pub history: History,
 
     /// Optional URI-based file opener. If set, citations to files in the model
@@ -615,7 +616,7 @@ pub async fn load_global_mcp_servers(
     // result.
     let cli_overrides = Vec::<(String, TomlValue)>::new();
     // There is no cwd/project context for this query, so this will not include
-    // MCP servers defined in in-repo .codex/ folders.
+    // MCP servers defined in in-repo .codex-zai/ folders.
     let cwd: Option<AbsolutePathBuf> = None;
     let config_layer_stack =
         load_config_layers_state(codex_home, cwd, &cli_overrides, LoaderOverrides::default())
@@ -766,7 +767,7 @@ pub fn set_default_oss_provider(codex_home: &Path, provider: &str) -> std::io::R
         .map_err(|err| std::io::Error::other(format!("failed to persist config.toml: {err}")))
 }
 
-/// Base config deserialized from ~/.codex/config.toml.
+/// Base config deserialized from ~/.codex-zai/config.toml.
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct ConfigToml {
@@ -863,7 +864,7 @@ pub struct ConfigToml {
     #[serde(default)]
     pub profiles: HashMap<String, ConfigProfile>,
 
-    /// Settings that govern if and what will be written to `~/.codex/history.jsonl`.
+    /// Settings that govern if and what will be written to `~/.codex-zai/history.jsonl`.
     #[serde(default)]
     pub history: Option<History>,
 
@@ -915,7 +916,7 @@ pub struct ConfigToml {
     pub ghost_snapshot: Option<GhostSnapshotToml>,
 
     /// Markers used to detect the project root when searching parent
-    /// directories for `.codex` folders. Defaults to [".git"] when unset.
+    /// directories for `.codex-zai` folders. Defaults to [".git"] when unset.
     #[serde(default)]
     pub project_root_markers: Option<Vec<String>>,
 
@@ -1346,7 +1347,7 @@ impl Config {
         let model_provider_id = model_provider
             .or(config_profile.model_provider)
             .or(cfg.model_provider)
-            .unwrap_or_else(|| "openai".to_string());
+            .unwrap_or_else(|| "zai".to_string());
         let model_provider = model_providers
             .get(&model_provider_id)
             .ok_or_else(|| {
@@ -1666,7 +1667,7 @@ impl Config {
 
 /// Returns the path to the Codex configuration directory, which can be
 /// specified by the `CODEX_HOME` environment variable. If not set, defaults to
-/// `~/.codex`.
+/// `~/.codex-zai`.
 ///
 /// - If `CODEX_HOME` is set, the value will be canonicalized and this
 ///   function will Err if the path does not exist.
@@ -1687,7 +1688,7 @@ pub fn find_codex_home() -> std::io::Result<PathBuf> {
             "Could not find home directory",
         )
     })?;
-    p.push(".codex");
+    p.push(CODEX_CONFIG_DIR_NAME);
     Ok(p)
 }
 
@@ -3519,6 +3520,9 @@ model_verbosity = "high"
             stream_max_retries: Some(10),
             stream_idle_timeout_ms: Some(300_000),
             requires_openai_auth: false,
+            chat_developer_role: None,
+            chat_reasoning_field: None,
+            chat_extra_body: None,
         };
         let model_provider_map = {
             let mut model_provider_map = built_in_model_providers();
