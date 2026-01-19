@@ -94,12 +94,25 @@ If you need to run this on Linux CI/CD runners (e.g., GitHub Actions, GitLab CI)
 
 Instead, use the **Releases** feature:
 1.  Push a tag (e.g., `v0.1`) to this repository.
-2.  The GitHub Action workflow will automatically build a Linux binary.
-3.  Download the binary from the **Releases** page in your pipeline script.
+2.  The GitHub Action workflow will automatically build Linux binaries for both x86_64 and ARM64 architectures.
+3.  Download the appropriate binary from the **Releases** page in your pipeline script.
+
+**Example Pipeline Script (Auto-detect architecture):**
 
 ```bash
-# Example pipeline step
-wget -O codex https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v0.1/codex
+# Detect architecture (x86_64 or arm64)
+ARCH=$(uname -m)
+if [ "$ARCH" = "aarch64" ]; then
+  BINARY_URL="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v0.1/codex-arm64"
+else
+  BINARY_URL="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v0.1/codex"
+fi
+
+# Download and install
+wget -O codex "$BINARY_URL"
 chmod +x codex
-./codex ...
+mv codex /usr/local/bin/
+
+# Verify
+codex --version
 ```

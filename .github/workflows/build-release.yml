@@ -2,8 +2,8 @@ name: Build and Release Codex ZAI
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
