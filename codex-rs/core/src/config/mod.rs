@@ -387,6 +387,9 @@ pub struct Config {
 
     /// OTEL configuration (exporter type, endpoint, headers, etc.).
     pub otel: crate::config::types::OtelConfig,
+
+    /// Optional override to enable/disable ZAI thinking.
+    pub thinking: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1155,6 +1158,7 @@ pub struct ConfigOverrides {
     pub tools_web_search_request: Option<bool>,
     /// Additional directories that should be treated as writable roots for this session.
     pub additional_writable_roots: Vec<PathBuf>,
+    pub thinking: Option<bool>,
 }
 
 /// Resolves the OSS provider from CLI override, profile config, or global config.
@@ -1241,6 +1245,7 @@ impl Config {
             show_raw_agent_reasoning,
             tools_web_search_request: override_tools_web_search_request,
             additional_writable_roots,
+            thinking: thinking_override,
         } = overrides;
 
         let active_profile_name = config_profile_key
@@ -1401,7 +1406,14 @@ impl Config {
 
         let forced_login_method = cfg.forced_login_method;
 
-        let model = model.or(config_profile.model).or(cfg.model);
+        let model = if model_provider_id == crate::model_provider_info::ZAI_PROVIDER_ID
+            && model.is_none()
+            && config_profile.model.is_none()
+        {
+            Some(crate::flags::ZAI_DEFAULT_MODEL.to_string())
+        } else {
+            model.or(config_profile.model).or(cfg.model)
+        };
 
         let compact_prompt = compact_prompt.or(cfg.compact_prompt).and_then(|value| {
             let trimmed = value.trim();
@@ -1461,6 +1473,7 @@ impl Config {
         let config = Self {
             model,
             review_model,
+            thinking: thinking_override,
             model_context_window: cfg.model_context_window,
             model_auto_compact_token_limit: cfg.model_auto_compact_token_limit,
             model_provider_id,
@@ -1687,7 +1700,7 @@ pub fn find_codex_home() -> std::io::Result<PathBuf> {
             "Could not find home directory",
         )
     })?;
-    p.push(".codex");
+    p.push(".codex-zai");
     Ok(p)
 }
 

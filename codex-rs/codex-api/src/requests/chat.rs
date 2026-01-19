@@ -55,7 +55,7 @@ impl<'a> ChatRequestBuilder<'a> {
         self
     }
 
-    pub fn build(self, _provider: &Provider) -> Result<ChatRequest, ApiError> {
+    pub fn build(self, provider: &Provider) -> Result<ChatRequest, ApiError> {
         let mut messages = Vec::<Value>::new();
         messages.push(json!({"role": "system", "content": self.instructions}));
 
@@ -189,12 +189,23 @@ impl<'a> ChatRequestBuilder<'a> {
                         json!(text)
                     };
 
-                    let mut msg = json!({"role": role, "content": content_value});
+                    let role_str = if role == "developer" && provider.is_zai() {
+                        "system"
+                    } else {
+                        role.as_str()
+                    };
+
+                    let mut msg = json!({"role": role_str, "content": content_value});
                     if role == "assistant"
                         && let Some(reasoning) = reasoning_by_anchor_index.get(&idx)
                         && let Some(obj) = msg.as_object_mut()
                     {
-                        obj.insert("reasoning".to_string(), json!(reasoning));
+                        let field = if provider.is_zai() {
+                            "reasoning_content"
+                        } else {
+                            "reasoning"
+                        };
+                        obj.insert(field.to_string(), json!(reasoning));
                     }
                     messages.push(msg);
                 }
@@ -213,7 +224,7 @@ impl<'a> ChatRequestBuilder<'a> {
                             "arguments": arguments,
                         }
                     });
-                    push_tool_call_message(&mut messages, tool_call, reasoning);
+                    push_tool_call_message(&mut messages, tool_call, reasoning, provider.is_zai());
                 }
                 ResponseItem::LocalShellCall {
                     id,
@@ -228,7 +239,7 @@ impl<'a> ChatRequestBuilder<'a> {
                         "status": status,
                         "action": action,
                     });
-                    push_tool_call_message(&mut messages, tool_call, reasoning);
+                    push_tool_call_message(&mut messages, tool_call, reasoning, provider.is_zai());
                 }
                 ResponseItem::FunctionCallOutput { call_id, output } => {
                     let content_value = if let Some(items) = &output.content_items {
@@ -270,7 +281,7 @@ impl<'a> ChatRequestBuilder<'a> {
                         }
                     });
                     let reasoning = reasoning_by_anchor_index.get(&idx).map(String::as_str);
-                    push_tool_call_message(&mut messages, tool_call, reasoning);
+                    push_tool_call_message(&mut messages, tool_call, reasoning, provider.is_zai());
                 }
                 ResponseItem::CustomToolCallOutput { call_id, output } => {
                     messages.push(json!({
@@ -291,12 +302,18 @@ impl<'a> ChatRequestBuilder<'a> {
             }
         }
 
-        let payload = json!({
+        let mut payload = json!({
             "model": self.model,
             "messages": messages,
             "stream": true,
             "tools": self.tools,
         });
+
+        if let Some(thinking) = &provider.thinking {
+            if let Some(obj) = payload.as_object_mut() {
+                obj.insert("thinking".to_string(), serde_json::to_value(thinking)?);
+            }
+        }
 
         let mut headers = build_conversation_headers(self.conversation_id);
         if let Some(subagent) = subagent_header(&self.session_source) {
@@ -310,40 +327,54 @@ impl<'a> ChatRequestBuilder<'a> {
     }
 }
 
-fn push_tool_call_message(messages: &mut Vec<Value>, tool_call: Value, reasoning: Option<&str>) {
-    // Chat Completions requires that tool calls are grouped into a single assistant message
-    // (with `tool_calls: [...]`) followed by tool role responses.
-    if let Some(Value::Object(obj)) = messages.last_mut()
-        && obj.get("role").and_then(Value::as_str) == Some("assistant")
-        && obj.get("content").is_some_and(Value::is_null)
-        && let Some(tool_calls) = obj.get_mut("tool_calls").and_then(Value::as_array_mut)
-    {
-        tool_calls.push(tool_call);
-        if let Some(reasoning) = reasoning {
-            if let Some(Value::String(existing)) = obj.get_mut("reasoning") {
-                if !existing.is_empty() {
-                    existing.push('\n');
+fn push_tool_call_message(
+    messages: &mut Vec<Value>,
+    tool_call: Value,
+    reasoning: Option<&str>,
+    is_zai: bool,
+) {
+        let field = if is_zai { "reasoning_content" } else { "reasoning" };
+        // Chat Completions requires that tool calls are grouped into a single assistant message
+        // (with `tool_calls: [...]`) followed by tool role responses.
+        if let Some(Value::Object(obj)) = messages.last_mut()
+            && obj.get("role").and_then(Value::as_str) == Some("assistant")
+            && (obj.get("content").is_some_and(Value::is_null)
+                || (is_zai
+                    && obj
+                        .get("content")
+                        .and_then(Value::as_str)
+                        .is_some_and(|s| s.is_empty())))
+            && let Some(tool_calls) = obj.get_mut("tool_calls").and_then(Value::as_array_mut)
+        {
+            tool_calls.push(tool_call);
+            if let Some(reasoning) = reasoning {
+                if let Some(Value::String(existing)) = obj.get_mut(field) {
+                    if !existing.is_empty() {
+                        existing.push('\n');
+                    }
+                    existing.push_str(reasoning);
+                } else {
+                    obj.insert(field.to_string(), Value::String(reasoning.to_string()));
                 }
-                existing.push_str(reasoning);
-            } else {
-                obj.insert(
-                    "reasoning".to_string(),
-                    Value::String(reasoning.to_string()),
-                );
             }
+            return;
         }
-        return;
-    }
-
-    let mut msg = json!({
-        "role": "assistant",
-        "content": null,
-        "tool_calls": [tool_call],
-    });
+    
+        let content_val = if is_zai {
+            json!("")
+        } else {
+            serde_json::Value::Null
+        };
+    
+        let mut msg = json!({
+            "role": "assistant",
+            "content": content_val,
+            "tool_calls": [tool_call],
+        });
     if let Some(reasoning) = reasoning
         && let Some(obj) = msg.as_object_mut()
     {
-        obj.insert("reasoning".to_string(), json!(reasoning));
+        obj.insert(field.to_string(), json!(reasoning));
     }
     messages.push(msg);
 }
@@ -375,6 +406,7 @@ mod tests {
                 retry_transport: true,
             },
             stream_idle_timeout: Duration::from_secs(1),
+            thinking: None,
         }
     }
 

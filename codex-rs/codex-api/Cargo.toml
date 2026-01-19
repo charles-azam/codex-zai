@@ -19,6 +19,7 @@ tokio-tungstenite = { workspace = true }
 tracing = { workspace = true }
 eventsource-stream = { workspace = true }
 regex-lite = { workspace = true }
+schemars = { workspace = true }
 tokio-util = { workspace = true, features = ["codec"] }
 url = { workspace = true }
 

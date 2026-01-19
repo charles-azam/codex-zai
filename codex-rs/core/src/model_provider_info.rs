@@ -8,6 +8,8 @@
 use codex_api::Provider as ApiProvider;
 use codex_api::WireApi as ApiWireApi;
 use codex_api::provider::RetryConfig as ApiRetryConfig;
+pub use codex_api::provider::ZaiThinkingConfig;
+pub use codex_api::provider::ZaiThinkingType;
 use codex_app_server_protocol::AuthMode;
 use http::HeaderMap;
 use http::header::HeaderName;
@@ -105,6 +107,10 @@ pub struct ModelProviderInfo {
     /// and API key (if needed) comes from the "env_key" environment variable.
     #[serde(default)]
     pub requires_openai_auth: bool,
+
+    /// Optional ZAI-specific thinking configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<ZaiThinkingConfig>,
 }
 
 impl ModelProviderInfo {
@@ -168,6 +174,7 @@ impl ModelProviderInfo {
             headers,
             retry,
             stream_idle_timeout: self.stream_idle_timeout(),
+            thinking: self.thinking.clone(),
         })
     }
 
@@ -254,11 +261,16 @@ impl ModelProviderInfo {
             stream_max_retries: None,
             stream_idle_timeout_ms: None,
             requires_openai_auth: true,
+            thinking: None,
         }
     }
 
     pub fn is_openai(&self) -> bool {
         self.name == OPENAI_PROVIDER_NAME
+    }
+
+    pub fn is_zai(&self) -> bool {
+        self.name.to_lowercase().contains("zai") || self.name.to_lowercase().contains("z.ai")
     }
 }
 
@@ -268,6 +280,7 @@ pub const DEFAULT_OLLAMA_PORT: u16 = 11434;
 pub const LMSTUDIO_OSS_PROVIDER_ID: &str = "lmstudio";
 pub const OLLAMA_OSS_PROVIDER_ID: &str = "ollama";
 pub const OLLAMA_CHAT_PROVIDER_ID: &str = "ollama-chat";
+pub const ZAI_PROVIDER_ID: &str = "zai";
 
 /// Built-in default provider list.
 pub fn built_in_model_providers() -> HashMap<String, ModelProviderInfo> {
@@ -279,6 +292,28 @@ pub fn built_in_model_providers() -> HashMap<String, ModelProviderInfo> {
     // `model_providers` in config.toml to add their own providers.
     [
         ("openai", P::create_openai_provider()),
+        (
+            ZAI_PROVIDER_ID,
+            P {
+                name: "ZAI".into(),
+                base_url: Some("https://api.z.ai/api/coding/paas/v4".into()),
+                env_key: Some("ZAI_API_KEY".into()),
+                env_key_instructions: Some("Set ZAI_API_KEY to your Z.AI API key.".into()),
+                experimental_bearer_token: None,
+                wire_api: WireApi::Chat,
+                query_params: None,
+                http_headers: None,
+                env_http_headers: None,
+                request_max_retries: None,
+                stream_max_retries: None,
+                stream_idle_timeout_ms: None,
+                requires_openai_auth: false,
+                thinking: Some(ZaiThinkingConfig {
+                    r#type: ZaiThinkingType::Enabled,
+                    clear_thinking: false,
+                }),
+            },
+        ),
         (
             OLLAMA_OSS_PROVIDER_ID,
             create_oss_provider(DEFAULT_OLLAMA_PORT, WireApi::Responses),
@@ -332,6 +367,7 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         stream_max_retries: None,
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
+        thinking: None,
     }
 }
 

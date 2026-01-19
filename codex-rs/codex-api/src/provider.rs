@@ -4,6 +4,9 @@ use codex_client::RetryOn;
 use codex_client::RetryPolicy;
 use http::Method;
 use http::header::HeaderMap;
+use schemars::JsonSchema;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -13,6 +16,19 @@ pub enum WireApi {
     Responses,
     Chat,
     Compact,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum ZaiThinkingType {
+    Enabled,
+    Disabled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+pub struct ZaiThinkingConfig {
+    pub r#type: ZaiThinkingType,
+    pub clear_thinking: bool,
 }
 
 /// High-level retry configuration for a provider.
@@ -55,6 +71,7 @@ pub struct Provider {
     pub headers: HeaderMap,
     pub retry: RetryConfig,
     pub stream_idle_timeout: Duration,
+    pub thinking: Option<ZaiThinkingConfig>,
 }
 
 impl Provider {
@@ -104,6 +121,10 @@ impl Provider {
 
         self.base_url.to_ascii_lowercase().contains("openai.azure.")
             || matches_azure_responses_base_url(&self.base_url)
+    }
+
+    pub fn is_zai(&self) -> bool {
+        self.name.to_lowercase().contains("zai") || self.name.to_lowercase().contains("z.ai")
     }
 }
 

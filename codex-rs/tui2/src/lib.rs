@@ -143,6 +143,12 @@ pub async fn run_main(
             .push("web_search=\"live\"".to_string());
     }
 
+    if cli.no_thinking {
+        cli.config_overrides
+            .raw_overrides
+            .push("thinking=false".to_string());
+    }
+
     // When using `--oss`, let the bootstrapper pick the model (defaulting to
     // gpt-oss:20b) and ensure it is present locally. Also, force the built‑in
     let raw_overrides = cli.config_overrides.raw_overrides.clone();
@@ -243,6 +249,7 @@ pub async fn run_main(
         show_raw_agent_reasoning: cli.oss.then_some(true),
         tools_web_search_request: None,
         additional_writable_roots: additional_dirs,
+        thinking: cli.no_thinking.then_some(false),
     };
 
     let config = load_config_or_exit(cli_kv_overrides.clone(), overrides.clone()).await;

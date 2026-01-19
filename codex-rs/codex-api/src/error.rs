@@ -34,3 +34,11 @@ impl From<RateLimitError> for ApiError {
         Self::RateLimit(err.to_string())
     }
 }
+
+impl From<serde_json::Error> for ApiError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::InvalidRequest {
+            message: err.to_string(),
+        }
+    }
+}

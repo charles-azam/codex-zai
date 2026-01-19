@@ -98,6 +98,10 @@ pub struct Cli {
     #[arg(long = "search", default_value_t = false)]
     pub web_search: bool,
 
+    /// Disable ZAI thinking capabilities.
+    #[arg(long = "no-thinking", default_value_t = false)]
+    pub no_thinking: bool,
+
     /// Additional directories that should be writable alongside the primary workspace.
     #[arg(long = "add-dir", value_name = "DIR", value_hint = ValueHint::DirPath)]
     pub add_dir: Vec<PathBuf>,
@@ -134,6 +138,7 @@ impl From<codex_tui::Cli> for Cli {
             dangerously_bypass_approvals_and_sandbox: cli.dangerously_bypass_approvals_and_sandbox,
             cwd: cli.cwd,
             web_search: cli.web_search,
+            no_thinking: cli.no_thinking,
             add_dir: cli.add_dir,
             no_alt_screen: cli.no_alt_screen,
             config_overrides: cli.config_overrides,
