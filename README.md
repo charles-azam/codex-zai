@@ -31,7 +31,7 @@ If you want a different install dir:
 ```bash
 INSTALL_DIR="$HOME/.local/bin" sh -c 'curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh'
 ```
-The script installs to `~/.local/bin` by default and adds it to your shell rc.
+The script installs to `~` by default and adds it to your shell rc.
 
 ### 1. Download
 Go to the **[Releases Page](../../releases/latest)** or use the command line:
