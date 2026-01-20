@@ -27,14 +27,13 @@ Go to the **[Releases Page](../../releases/latest)** or use the command line:
 
 **For Standard Linux (x86_64):**
 ```bash
-# Replace USER/REPO with your GitHub details
-wget -O codex-zai https://github.com/USER/REPO/releases/latest/download/codex-zai
+wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai
 chmod +x codex-zai
 ```
 
 **For ARM Linux (ARM64 / Graviton / Apple Silicon Docker):**
 ```bash
-wget -O codex-zai https://github.com/USER/REPO/releases/latest/download/codex-zai-arm64
+wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai-arm64
 chmod +x codex-zai
 ```
 
@@ -94,7 +93,7 @@ Use this snippet in your Dockerfile or CI script to automatically detect the arc
 ```bash
 # Auto-detect architecture (x86_64 or arm64)
 ARCH=$(uname -m)
-BASE_URL="https://github.com/USER/REPO/releases/latest/download"
+BASE_URL="https://github.com/charles-azam/codex-zai/releases/latest/download"
 
 if [ "$ARCH" = "aarch64" ]; then
   echo "Downloading ARM64 binary..."
