@@ -10,11 +10,17 @@ mkdir -p "$DIR"
 curl -fsSL "$URL" -o "$DIR/codex-zai"
 chmod +x "$DIR/codex-zai"
 
-if [ -f "$HOME/.zshrc" ]; then
-  grep -q "$DIR" "$HOME/.zshrc" 2>/dev/null || printf '\nexport PATH="%s:$PATH"\n' "$DIR" >> "$HOME/.zshrc"
+ZSHRC="$HOME/.zshrc"
+BASHRC="$HOME/.bashrc"
+
+touch "$ZSHRC" "$BASHRC"
+
+ALIAS_LINE="alias codex-zai=\"$DIR/codex-zai\""
+if ! grep -q "alias codex-zai=" "$ZSHRC" 2>/dev/null; then
+  printf '\n%s\n' "$ALIAS_LINE" >> "$ZSHRC"
 fi
-if [ -f "$HOME/.bashrc" ]; then
-  grep -q "$DIR" "$HOME/.bashrc" 2>/dev/null || printf '\nexport PATH="%s:$PATH"\n' "$DIR" >> "$HOME/.bashrc"
+if ! grep -q "alias codex-zai=" "$BASHRC" 2>/dev/null; then
+  printf '\n%s\n' "$ALIAS_LINE" >> "$BASHRC"
 fi
 
 echo "Installed codex-zai to $DIR/codex-zai"
