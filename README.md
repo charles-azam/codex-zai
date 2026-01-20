@@ -22,6 +22,16 @@ This fork modifies the core Codex engine to support ZAI specific features:
 
 **Do not build from source unless you have to.** We provide pre-compiled binaries for Linux (x86_64 and ARM64).
 
+### 0. One-line install (Docker/CI)
+```bash
+curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh
+```
+
+If you are not root, set a writable install dir:
+```bash
+INSTALL_DIR="$HOME/.local/bin" sh -c 'curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh'
+```
+
 ### 1. Download
 Go to the **[Releases Page](../../releases/latest)** or use the command line:
 
