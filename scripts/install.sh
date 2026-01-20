@@ -2,7 +2,7 @@
 set -e
 
 BASE_URL="https://github.com/charles-azam/codex-zai/releases/latest/download"
-INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 ARCH="$(uname -m)"
 case "$ARCH" in
@@ -34,5 +34,12 @@ fi
 chmod +x "$tmp"
 mkdir -p "$INSTALL_DIR"
 mv "$tmp" "$INSTALL_DIR/codex-zai"
+
+rc="$HOME/.zshrc"
+[ -f "$HOME/.bashrc" ] && rc="$HOME/.bashrc"
+if ! grep -q "$INSTALL_DIR" "$rc" 2>/dev/null; then
+  printf '\nexport PATH="%s:$PATH"\n' "$INSTALL_DIR" >> "$rc"
+  echo "Added $INSTALL_DIR to PATH in $rc"
+fi
 
 echo "Installed codex-zai to $INSTALL_DIR/codex-zai"
