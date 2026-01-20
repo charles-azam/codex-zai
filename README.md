@@ -33,6 +33,24 @@ INSTALL_DIR="$HOME/.local/bin" sh -c 'curl -fsSL https://raw.githubusercontent.c
 ```
 The script installs to `~` by default and adds it to your shell rc.
 
+### 0.1. Quick start
+```bash
+# Reload your shell config (or open a new terminal)
+source ~/.zshrc 2>/dev/null || source ~/.bashrc
+
+# Set your API key
+export ZAI_API_KEY="your_api_key_here"
+
+# Verify
+codex-zai --version
+```
+
+### 0.2. Dockerfile snippet
+```dockerfile
+RUN curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh
+ENV PATH="$HOME:$PATH"
+```
+
 ### 1. Download
 Go to the **[Releases Page](../../releases/latest)** or use the command line:
 
