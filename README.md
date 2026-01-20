@@ -13,58 +13,57 @@ This fork modifies the core Codex engine to support ZAI specific features:
 3.  **Thinking Toggle:** Added a `--no-thinking` flag to disable reasoning for control group benchmarks.
 4.  **Web Search Integration:** Connected ZAI's native "in-chat" web search capabilities via the `--search` flag.
 5.  **Environment Isolation:** All configuration and session history is stored in `~/.codex-zai` instead of `~/.codex` to prevent conflicts with your existing Codex installation.
-6.  **Default Model:** Automatically defaults to `glm-4.7`.
+6.  **Default Model:** Automatically defaults to `glm-4.7` and the ZAI provider.
+7.  **Renamed Binary:** The tool is now called `codex-zai` to avoid confusion.
 
 ---
 
-## Prerequisites
+## 🚀 Quick Install (Binaries)
 
-You need a ZAI API Key to run this fork.
+**Do not build from source unless you have to.** We provide pre-compiled binaries for Linux (x86_64 and ARM64).
 
+### 1. Download
+Go to the **[Releases Page](../../releases/latest)** or use the command line:
+
+**For Standard Linux (x86_64):**
+```bash
+# Replace USER/REPO with your GitHub details
+wget -O codex-zai https://github.com/USER/REPO/releases/latest/download/codex-zai
+chmod +x codex-zai
+```
+
+**For ARM Linux (ARM64 / Graviton / Apple Silicon Docker):**
+```bash
+wget -O codex-zai https://github.com/USER/REPO/releases/latest/download/codex-zai-arm64
+chmod +x codex-zai
+```
+
+### 2. Move to Path
+```bash
+sudo mv codex-zai /usr/local/bin/
+```
+
+### 3. Set API Key
 ```bash
 export ZAI_API_KEY="your_api_key_here"
 ```
 
 ---
 
-## Building from Source
-
-You need **Rust** installed (stable toolchain).
-
-```bash
-# Navigate to the rust code directory
-cd codex-rs
-
-# Build the CLI
-cargo build -p codex-cli
-```
-
-To build a release binary (faster, smaller):
-
-```bash
-cargo build --release -p codex-cli
-```
-
-The binary will be located at `codex-rs/target/debug/codex` (or `target/release/codex`).
-
----
-
-## Running the Benchmark
-
-You can run the agent directly using `cargo run`.
+## 🤖 Running the Benchmark
 
 ### 1. Standard Benchmark (Thinking Enabled)
 Uses GLM-4.7 with Preserved Thinking enabled. This is the primary test case for agentic reasoning.
 
 ```bash
-cargo run -p codex-cli -- -c model_provider=zai
+codex-zai
 ```
 
 ### 2. Control Group (Thinking Disabled)
 Forces the model to skip the reasoning phase and answer immediately.
 
 ```bash
-cargo run -p codex-cli -- -c model_provider=zai --no-thinking
+codex-zai --no-thinking
 ```
 
 ### 3. Web Search Capability
@@ -72,47 +71,54 @@ Enables ZAI's native web search tool. The model can browse the web to answer que
 
 ```bash
 # With Thinking + Web Search
-cargo run -p codex-cli -- -c model_provider=zai --search
+codex-zai --search
 
 # Without Thinking + Web Search
-cargo run -p codex-cli -- -c model_provider=zai --no-thinking --search
+codex-zai --no-thinking --search
 ```
 
-### 4. Headless Execution (for Scripts)
-Use the `exec` mode to run without the UI, useful for automated pipelines.
+### 4. Headless Execution (for Scripts/Pipelines)
+Use the `exec` mode to run without the UI.
 
 ```bash
 # Example: Pipe a prompt into the agent
-echo "Calculate the 10th Fibonacci number" | cargo run -p codex-cli -- exec -c model_provider=zai --full-auto
+echo "Calculate the 10th Fibonacci number" | codex-zai exec --full-auto
 ```
 
 ---
 
-## Deployment for Pipelines
+## 📦 Deployment for Pipelines (CI/CD)
 
-If you need to run this on Linux CI/CD runners (e.g., GitHub Actions, GitLab CI), **do not commit the macOS binary**.
-
-Instead, use the **Releases** feature:
-1.  Push a tag (e.g., `v0.1`) to this repository.
-2.  The GitHub Action workflow will automatically build Linux binaries for both x86_64 and ARM64 architectures.
-3.  Download the appropriate binary from the **Releases** page in your pipeline script.
-
-**Example Pipeline Script (Auto-detect architecture):**
+Use this snippet in your Dockerfile or CI script to automatically detect the architecture and install the correct binary.
 
 ```bash
-# Detect architecture (x86_64 or arm64)
+# Auto-detect architecture (x86_64 or arm64)
 ARCH=$(uname -m)
+BASE_URL="https://github.com/USER/REPO/releases/latest/download"
+
 if [ "$ARCH" = "aarch64" ]; then
-  BINARY_URL="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v0.1/codex-arm64"
+  echo "Downloading ARM64 binary..."
+  wget -O codex-zai "$BASE_URL/codex-zai-arm64"
 else
-  BINARY_URL="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v0.1/codex"
+  echo "Downloading x86_64 binary..."
+  wget -O codex-zai "$BASE_URL/codex-zai"
 fi
 
-# Download and install
-wget -O codex "$BINARY_URL"
-chmod +x codex
-mv codex /usr/local/bin/
+chmod +x codex-zai
+mv codex-zai /usr/local/bin/
 
-# Verify
-codex --version
+# Verify installation
+codex-zai --version
+```
+
+---
+
+## Building from Source (Optional)
+
+If you are developing features, you can build manually using Rust.
+
+```bash
+cd codex-rs
+cargo build --release -p codex-cli
+./target/release/codex-zai --version
 ```

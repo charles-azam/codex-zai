@@ -62,14 +62,14 @@ jobs:
       - name: Rename Binary
         working-directory: codex-rs/target/${{ matrix.target }}/release
         run: |
-          if [ "codex" != "codex${{ matrix.suffix }}" ]; then
-            mv codex codex${{ matrix.suffix }}
+          if [ "codex-zai" != "codex-zai${{ matrix.suffix }}" ]; then
+            mv codex-zai codex-zai${{ matrix.suffix }}
           fi
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: codex-rs/target/${{ matrix.target }}/release/codex${{ matrix.suffix }}
+          files: codex-rs/target/${{ matrix.target }}/release/codex-zai${{ matrix.suffix }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

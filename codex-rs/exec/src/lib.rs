@@ -228,6 +228,12 @@ pub async fn run_main(cli: Cli, codex_linux_sandbox_exe: Option<PathBuf>) -> any
         std::process::exit(1);
     }
 
+    if config.model_provider.is_zai() && std::env::var("ZAI_API_KEY").is_err() {
+        eprintln!("Error: ZAI_API_KEY environment variable is not set.");
+        eprintln!("Please set it using: export ZAI_API_KEY=...");
+        std::process::exit(1);
+    }
+
     let ollama_chat_support_notice = match ollama_chat_deprecation_notice(&config).await {
         Ok(notice) => notice,
         Err(err) => {

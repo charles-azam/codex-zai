@@ -1172,6 +1172,7 @@ dependencies = [
  "codex-utils-cargo-bin",
  "codex-windows-sandbox",
  "libc",
+ "openssl",
  "owo-colors",
  "predicates",
  "pretty_assertions",

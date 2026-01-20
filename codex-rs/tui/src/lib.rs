@@ -252,6 +252,12 @@ pub async fn run_main(
         std::process::exit(1);
     }
 
+    if config.model_provider.is_zai() && std::env::var("ZAI_API_KEY").is_err() {
+        eprintln!("Error: ZAI_API_KEY environment variable is not set.");
+        eprintln!("Please set it using: export ZAI_API_KEY=...");
+        std::process::exit(1);
+    }
+
     let active_profile = config.active_profile.clone();
     let log_dir = codex_core::config::log_dir(&config)?;
     std::fs::create_dir_all(&log_dir)?;
@@ -720,6 +726,11 @@ fn should_show_login_screen(login_status: LoginStatus, config: &Config) -> bool 
     // Only show the login screen for providers that actually require OpenAI auth
     // (OpenAI or equivalents). For OSS/other providers, skip login entirely.
     if !config.model_provider.requires_openai_auth {
+        return false;
+    }
+
+    // Safety check: if provider is ZAI, never show login screen.
+    if config.model_provider.is_zai() {
         return false;
     }
 
