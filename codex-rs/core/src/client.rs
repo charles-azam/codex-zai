@@ -520,17 +520,19 @@ impl ModelClientSession {
                 .provider
                 .to_api_provider(auth.as_ref().map(CodexAuth::internal_auth_mode))?;
 
-            if let Some(thinking_enabled) = self.state.config.thinking {
-                if api_provider.is_zai() {
-                    if let Some(thinking) = &mut api_provider.thinking {
-                        thinking.r#type = if thinking_enabled {
-                            codex_api::provider::ZaiThinkingType::Enabled
-                        } else {
-                            codex_api::provider::ZaiThinkingType::Disabled
-                        };
-                    } else if thinking_enabled {
+            if let Some(thinking_enabled) = self.state.config.thinking
+                && api_provider.is_zai()
+            {
+                let thinking_type = if thinking_enabled {
+                    codex_api::provider::ZaiThinkingType::Enabled
+                } else {
+                    codex_api::provider::ZaiThinkingType::Disabled
+                };
+                match &mut api_provider.thinking {
+                    Some(thinking) => thinking.r#type = thinking_type,
+                    None => {
                         api_provider.thinking = Some(codex_api::provider::ZaiThinkingConfig {
-                            r#type: codex_api::provider::ZaiThinkingType::Enabled,
+                            r#type: thinking_type,
                             clear_thinking: false,
                         });
                     }

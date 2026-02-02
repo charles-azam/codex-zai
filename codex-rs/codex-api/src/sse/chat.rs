@@ -251,14 +251,23 @@ pub async fn process_chat_sse<S>(
                 }
             }
 
-            if let Some(message) = choice.get("message")
-                && let Some(reasoning) = message.get("reasoning")
-            {
-                if let Some(text) = reasoning.as_str() {
-                    append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string()).await;
-                } else if let Some(text) = reasoning.get("text").and_then(|v| v.as_str()) {
-                    append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string()).await;
-                } else if let Some(text) = reasoning.get("content").and_then(|v| v.as_str()) {
+            if let Some(message) = choice.get("message") {
+                if let Some(reasoning) = message.get("reasoning") {
+                    if let Some(text) = reasoning.as_str() {
+                        append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string())
+                            .await;
+                    } else if let Some(text) = reasoning.get("text").and_then(|v| v.as_str()) {
+                        append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string())
+                            .await;
+                    } else if let Some(text) = reasoning.get("content").and_then(|v| v.as_str()) {
+                        append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string())
+                            .await;
+                    }
+                }
+
+                if reasoning_item.is_none()
+                    && let Some(text) = message.get("reasoning_content").and_then(|v| v.as_str())
+                {
                     append_reasoning_text(&tx_event, &mut reasoning_item, text.to_string()).await;
                 }
             }
