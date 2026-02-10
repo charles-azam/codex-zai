@@ -1,152 +1,99 @@
-# Codex ZAI Fork (Benchmark Edition)
+# Codex ZAI -- OpenAI Codex fork for GLM-4.7
 
-This is a specialized fork of OpenAI Codex, adapted to benchmark **ZAI's GLM-4.7** model on complex agentic tasks.
+A fork of [OpenAI Codex](https://github.com/openai/codex) adapted to run **ZAI's GLM-4.7** model. Built for benchmarking agentic scaffoldings on [Terminal-Bench 2.0](https://github.com/laude-institute/harbor).
 
-**Objective:** To evaluate the performance of GLM-4.7's "Preserved Thinking" and agentic capabilities within a production-grade coding agent scaffolding. This fork enables direct comparison between raw model outputs and agentic workflows using the same underlying model.
+**Benchmark results:** Scored **0.15** on Terminal-Bench (1 run). See the [full writeup](https://github.com/charles-azam/codex-zai) for how this compares to Gemini CLI (0.23), Claude Code (0.29), and Mistral Vibe (0.35) using the same model.
 
-## Key modifications
+## Why this fork exists
 
-This fork modifies the core Codex engine to support ZAI specific features:
+I wanted to test whether the same model performs differently across coding agent scaffoldings. Codex's Rust codebase is the most "systems programming" approach of the agents I tested -- a 55-crate Cargo workspace with an event-driven async state machine, typed error handling, and multi-platform sandboxing (Seccomp + Landlock + Seatbelt). The architecture is impressive, but the tight coupling to OpenAI's ecosystem made it the hardest to adapt by far.
 
-1.  **Native ZAI Provider:** Implemented a built-in `zai` provider pointing to `https://api.z.ai/api/coding/paas/v4`.
-2.  **Preserved Thinking:** Integrated ZAI's `reasoning_content` field. The agent now captures and displays the model's hidden reasoning process.
-3.  **Thinking Toggle:** Added a `--no-thinking` flag to disable reasoning for control group benchmarks.
-4.  **Web Search Integration:** Connected ZAI's native "in-chat" web search capabilities via the `--search` flag.
-5.  **Environment Isolation:** All configuration and session history is stored in `~/.codex-zai` instead of `~/.codex` to prevent conflicts with your existing Codex installation.
-6.  **Default Model:** Automatically defaults to `glm-4.7` and the ZAI provider.
-7.  **Renamed Binary:** The tool is now called `codex-zai` to avoid confusion.
+## Why Codex scored lowest
 
----
+The 0.15 score (vs 0.35 for Mistral Vibe with the same model) isn't a knock on Codex's engineering -- it reflects how tightly the scaffolding is optimized for GPT. Several factors compound:
 
-## 🚀 Quick Install (Binaries)
+- **`apply_patch` demands precise diff syntax.** Codex edits files through unified diffs rather than `write_file`. This is elegant for frontier models trained on git diffs, but GLM-4.7 frequently produces malformed patches that fail silently or corrupt files.
+- **The Responses API adaptation is lossy.** ZAI's endpoint speaks Chat Completions semantics. Mapping that onto Codex's Responses API wire format means features like native `local_shell` tool calls, WebSocket incremental append, and server-side prompt caching are either stubbed or degraded.
+- **No prompt cache benefit.** Codex relies on OpenAI's `prompt_cache_key` for fast turn-to-turn latency. Without it, every turn pays full prefill cost.
 
-**Do not build from source unless you have to.** We provide pre-compiled binaries for Linux (x86_64 and ARM64).
+The scaffolding matters -- roughly 2x between the best and worst agent on the same model.
 
-### 0. One-line install
+## On the Rust choice
+
+I understand why they chose Rust. When your agent executes shell commands on user machines, you want syscall-level sandboxing (seccomp filters, landlock, seatbelt profiles) as first-class citizens, not FFI bolted on. The compile-time safety guarantees also make the permission system and sandbox transforms auditable in a way that's hard to achieve in Python or TypeScript.
+
+That said, it is a pain in the ass to work with for this kind of adaptation. Every protocol mismatch between ZAI and OpenAI surfaces as a compile error across multiple crates, and a full rebuild takes up to 5 minutes. The iteration cycle for "change one field name, wait 5 minutes, see if it works" is brutal compared to the TypeScript agents where you just save and re-run.
+
+## On the Responses API
+
+OpenAI moved Codex away from the Chat Completions API (confusingly called the "OpenAI endpoint" despite being the industry standard) to their new Responses API. This makes sense for them -- it unlocks native tool types like `local_shell`, WebSocket streaming with incremental append, server-side conversation state, and encrypted reasoning tokens. These are real architectural wins when you control both the client and server.
+
+But for anyone trying to plug in a non-OpenAI model, it's a pain in the ass. Every other provider speaks Chat Completions. ZAI's `/v4` endpoint returns `reasoning_content` (plaintext) instead of `reasoning.encrypted_content`, uses `"system"` roles instead of `"developer"`, and expects standard function calls instead of native shell tool types. The adaptation layer is non-trivial and inevitably lossy -- you're translating between two fundamentally different protocol philosophies.
+
+## What I changed
+
+- **Native ZAI provider** pointing to `https://api.z.ai/api/coding/paas/v4` with `ZAI_API_KEY` authentication
+- **Preserved Thinking** -- captures GLM-4.7's plaintext `reasoning_content` field across turns, maintaining reasoning context in multi-turn conversations (unlike OpenAI's encrypted reasoning tokens, you can actually read the model's chain of thought)
+- **Protocol adaptations** -- `"developer"` role mapped to `"system"`, `reasoning_content` instead of `reasoning`, assistant content set to `""` instead of `null` for tool calls
+- **Disabled/stubbed OpenAI-specific features** -- WebSocket incremental append, prompt cache keys, remote compaction tasks, native `local_shell` tool type
+- **`--no-thinking` flag** to disable reasoning for control experiments
+- **`--search` flag** for ZAI's native web search
+- **Renamed binary** (`codex-zai`) and config directory (`~/.codex-zai`) to avoid conflicts with upstream
+
+## Quick install
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh
 ```
 
-If you want a different install dir:
+Or manually:
+
 ```bash
-INSTALL_DIR="$HOME/.local/bin" sh -c 'curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh'
-```
-The script installs to `~` by default and adds it to your shell rc.
+# x86_64
+wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai
 
-### 0.1. Quick start
-```bash
-# Reload your shell config (or open a new terminal)
-source ~/.zshrc 2>/dev/null || source ~/.bashrc
+# ARM64
+wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai-arm64
 
-# Set your API key
-export ZAI_API_KEY="your_api_key_here"
-
-# Verify
-codex-zai --version
+chmod +x codex-zai && sudo mv codex-zai /usr/local/bin/
 ```
 
-### 0.2. Dockerfile snippet
+## Usage
+
+```bash
+export ZAI_API_KEY="your_key"
+
+# Standard (thinking enabled)
+codex-zai
+
+# Without thinking
+codex-zai --no-thinking
+
+# With web search
+codex-zai --search
+
+# Headless (for scripts/pipelines)
+echo "Fix the bug in main.py" | codex-zai exec --full-auto
+```
+
+## Dockerfile
+
 ```dockerfile
 RUN curl -fsSL https://raw.githubusercontent.com/charles-azam/codex-zai/main/scripts/install.sh | sh
 ENV PATH="$HOME:$PATH"
 ```
 
-### 1. Download
-Go to the **[Releases Page](../../releases/latest)** or use the command line:
-
-**For Standard Linux (x86_64):**
-```bash
-wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai
-chmod +x codex-zai
-```
-
-**For ARM Linux (ARM64 / Graviton / Apple Silicon Docker):**
-```bash
-wget -O codex-zai https://github.com/charles-azam/codex-zai/releases/latest/download/codex-zai-arm64
-chmod +x codex-zai
-```
-
-### 2. Move to Path
-```bash
-sudo mv codex-zai /usr/local/bin/
-```
-
-### 3. Set API Key
-```bash
-export ZAI_API_KEY="your_api_key_here"
-```
-
----
-
-## 🤖 Running the Benchmark
-
-### 1. Standard Benchmark (Thinking Enabled)
-Uses GLM-4.7 with Preserved Thinking enabled. This is the primary test case for agentic reasoning.
-
-```bash
-codex-zai
-```
-
-### 2. Control Group (Thinking Disabled)
-Forces the model to skip the reasoning phase and answer immediately.
-
-```bash
-codex-zai --no-thinking
-```
-
-### 3. Web Search Capability
-Enables ZAI's native web search tool. The model can browse the web to answer questions.
-
-```bash
-# With Thinking + Web Search
-codex-zai --search
-
-# Without Thinking + Web Search
-codex-zai --no-thinking --search
-```
-
-### 4. Headless Execution (for Scripts/Pipelines)
-Use the `exec` mode to run without the UI.
-
-```bash
-# Example: Pipe a prompt into the agent
-echo "Calculate the 10th Fibonacci number" | codex-zai exec --full-auto
-```
-
----
-
-## 📦 Deployment for Pipelines (CI/CD)
-
-Use this snippet in your Dockerfile or CI script to automatically detect the architecture and install the correct binary.
-
-```bash
-# Auto-detect architecture (x86_64 or arm64)
-ARCH=$(uname -m)
-BASE_URL="https://github.com/charles-azam/codex-zai/releases/latest/download"
-
-if [ "$ARCH" = "aarch64" ]; then
-  echo "Downloading ARM64 binary..."
-  wget -O codex-zai "$BASE_URL/codex-zai-arm64"
-else
-  echo "Downloading x86_64 binary..."
-  wget -O codex-zai "$BASE_URL/codex-zai"
-fi
-
-chmod +x codex-zai
-mv codex-zai /usr/local/bin/
-
-# Verify installation
-codex-zai --version
-```
-
----
-
-## Building from Source (Optional)
-
-If you are developing features, you can build manually using Rust.
+## Building from source
 
 ```bash
 cd codex-rs
-cargo build --release -p codex-cli
+cargo build --release -p codex-cli  # ~5 minutes, go get coffee
 ./target/release/codex-zai --version
 ```
+
+## Related
+
+- [Article](https://charlesazam.com/blog/) -- full benchmark writeup and architecture comparison
+- [gemini-cli-zai](https://github.com/charles-azam/gemini-cli-zai) -- Gemini CLI fork (scored 0.23)
+- [mistral-vibe-zai](https://github.com/charles-azam/mistral-vibe-zai) -- Mistral Vibe fork (scored 0.35)
+- [Upstream Codex](https://github.com/openai/codex) -- original project
