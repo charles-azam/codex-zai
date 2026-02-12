@@ -1,6 +1,6 @@
-# Codex ZAI -- OpenAI Codex fork for GLM-4.7
+# Codex ZAI -- OpenAI Codex fork for GLM-5
 
-A fork of [OpenAI Codex](https://github.com/openai/codex) adapted to run **ZAI's GLM-4.7** model. Built for benchmarking agentic scaffoldings on [Terminal-Bench 2.0](https://github.com/laude-institute/harbor).
+A fork of [OpenAI Codex](https://github.com/openai/codex) adapted to run **ZAI's GLM-5** model (defaults to `glm-5`, use `-m glm-4.7` to switch back). Built for benchmarking agentic scaffoldings on [Terminal-Bench 2.0](https://github.com/laude-institute/harbor).
 
 **Benchmark results:** Scored **0.15** on Terminal-Bench (1 run). See the [full writeup](https://github.com/charles-azam/codex-zai) for how this compares to Gemini CLI (0.23), Claude Code (0.29), and Mistral Vibe (0.35) using the same model.
 
@@ -33,7 +33,7 @@ But for anyone trying to plug in a non-OpenAI model, it's a pain in the ass. Eve
 ## What I changed
 
 - **Native ZAI provider** pointing to `https://api.z.ai/api/coding/paas/v4` with `ZAI_API_KEY` authentication
-- **Preserved Thinking** -- captures GLM-4.7's plaintext `reasoning_content` field across turns, maintaining reasoning context in multi-turn conversations (unlike OpenAI's encrypted reasoning tokens, you can actually read the model's chain of thought)
+- **Preserved Thinking** -- captures ZAI's plaintext `reasoning_content` field across turns, maintaining reasoning context in multi-turn conversations (unlike OpenAI's encrypted reasoning tokens, you can actually read the model's chain of thought)
 - **Protocol adaptations** -- `"developer"` role mapped to `"system"`, `reasoning_content` instead of `reasoning`, assistant content set to `""` instead of `null` for tool calls
 - **Disabled/stubbed OpenAI-specific features** -- WebSocket incremental append, prompt cache keys, remote compaction tasks, native `local_shell` tool type
 - **`--no-thinking` flag** to disable reasoning for control experiments
@@ -63,8 +63,11 @@ chmod +x codex-zai && sudo mv codex-zai /usr/local/bin/
 ```bash
 export ZAI_API_KEY="your_key"
 
-# Standard (thinking enabled)
+# Standard -- GLM-5 with thinking enabled
 codex-zai
+
+# Use GLM-4.7 instead
+codex-zai -m glm-4.7
 
 # Without thinking
 codex-zai --no-thinking

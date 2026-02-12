@@ -5,4 +5,4 @@ env_flags! {
     pub CODEX_RS_SSE_FIXTURE: Option<&str> = None;
 }
 
-pub const ZAI_DEFAULT_MODEL: &str = "glm-4.7";
+pub const ZAI_DEFAULT_MODEL: &str = "glm-5";
